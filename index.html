@@ -23,7 +23,7 @@
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
+            gap: 1px; /* Tighter gap for mobile */
         }
         /* Remove arrows from number input */
         input[type=number]::-webkit-inner-spin-button, 
@@ -47,7 +47,6 @@
     <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden transition-opacity"></div>
 
     <!-- SIDEBAR: Class List -->
-    <!-- Updated classes for mobile responsiveness: fixed on mobile, hidden by default (-translate-x-full) -->
     <aside id="mainSidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 flex flex-col shadow-xl md:shadow-sm transition-transform duration-300 transform -translate-x-full md:translate-x-0 md:static md:inset-auto">
         <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-start">
             <div>
@@ -97,17 +96,22 @@
     <!-- MAIN CONTENT -->
     <main class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative w-full">
         
-        <!-- HEADER (Visible on all screens now) -->
-        <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shrink-0 z-20 shadow-sm">
-            <div class="flex items-center gap-3">
-                <button onclick="toggleSidebar()" class="text-gray-600 hover:text-indigo-600 p-1 rounded-md hover:bg-gray-100 transition-colors" title="Toggle Menu">
+        <!-- HEADER (Dynamic: Shows App Name OR Class Name on Mobile) -->
+        <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shrink-0 z-20 shadow-sm min-h-[60px]">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <button onclick="toggleSidebar()" class="text-gray-600 hover:text-indigo-600 p-1 rounded-md hover:bg-gray-100 transition-colors shrink-0" title="Toggle Menu">
                     <i class="ph ph-list text-2xl"></i>
                 </button>
-                <!-- Title visible only on mobile to avoid duplication with sidebar on desktop -->
-                <span class="font-bold text-gray-700 text-sm md:hidden">Classroom Manager</span>
+                <!-- Title: Shows "Classroom Manager" on desktop, or specific class on mobile -->
+                <div class="flex flex-col overflow-hidden">
+                    <span id="mobileHeaderTitle" class="font-bold text-gray-800 text-lg md:hidden truncate">Classroom Manager</span>
+                    <span id="mobileHeaderSubtitle" class="text-[10px] text-gray-500 font-medium md:hidden hidden">0 Students</span>
+                </div>
             </div>
-            <!-- Spacer or right-side actions if needed -->
-            <div class="w-8"></div> 
+            <!-- Right-side actions (Mobile Delete Button appears here) -->
+            <div id="mobileHeaderActions" class="flex items-center gap-2">
+                <!-- Delete button injected via JS when class selected -->
+            </div> 
         </div>
 
         <!-- Empty State (When no class selected) -->
@@ -125,16 +129,16 @@
         <!-- Class Dashboard (Hidden by default) -->
         <div id="classDashboard" class="hidden flex-col h-full z-10 fade-in">
             
-            <!-- Header -->
-            <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 md:py-5 flex justify-between items-center shadow-sm sticky top-0 z-20">
+            <!-- Desktop Dashboard Header (Hidden on Mobile now) -->
+            <header class="hidden md:flex bg-white border-b border-gray-200 px-8 py-5 justify-between items-center shadow-sm sticky top-0 z-20">
                 <div>
-                    <h2 id="currentClassName" class="text-xl md:text-2xl font-bold text-gray-800 tracking-tight truncate max-w-[200px] md:max-w-md">Mathematics 101</h2>
+                    <h2 id="currentClassName" class="text-2xl font-bold text-gray-800 tracking-tight truncate max-w-md">Mathematics 101</h2>
                     <div class="flex items-center gap-2 mt-1">
                         <span class="w-2 h-2 rounded-full bg-green-500"></span>
                         <p class="text-xs text-gray-500 font-medium uppercase tracking-wide" id="studentCountBadge">0 Students</p>
                     </div>
                 </div>
-                <div class="flex gap-2 md:gap-3">
+                <div class="flex gap-3">
                     <button onclick="askDeleteCurrentClass()" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Delete This Class">
                         <i class="ph ph-trash text-xl"></i>
                     </button>
@@ -251,8 +255,8 @@
                     </div>
 
                     <!-- Calendar Grid with responsive sizing -->
-                    <div class="border border-gray-100 rounded-lg overflow-hidden shadow-sm overflow-x-auto">
-                        <div class="min-w-[300px] md:min-w-[600px]"> 
+                    <div class="border border-gray-100 rounded-lg overflow-hidden shadow-sm w-full">
+                        <div class="w-full"> 
                             <div class="calendar-grid bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold text-gray-400 text-center py-2 tracking-wider">
                                 <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
                             </div>
@@ -1041,6 +1045,19 @@
             sortClassStudents(cls);
             saveData(); // Save the sorted order
 
+            // Dynamic Mobile Header Update
+            document.getElementById('mobileHeaderTitle').innerText = cls.name;
+            document.getElementById('mobileHeaderSubtitle').innerText = `${cls.students.length} Students`;
+            document.getElementById('mobileHeaderSubtitle').classList.remove('hidden');
+            
+            // Add delete button to mobile header actions
+            const mobileActions = document.getElementById('mobileHeaderActions');
+            mobileActions.innerHTML = `
+                <button onclick="askDeleteCurrentClass()" class="text-gray-400 hover:text-red-500 p-2 rounded-md md:hidden" title="Delete Class">
+                    <i class="ph ph-trash text-xl"></i>
+                </button>
+            `;
+
             document.getElementById('emptyState').classList.add('hidden');
             const dashboard = document.getElementById('classDashboard');
             dashboard.classList.remove('hidden');
@@ -1469,7 +1486,7 @@
             for (let i = 0; i < startDayIndex; i++) {
                 const cell = document.createElement('div');
                 // Adjusted height for mobile
-                cell.className = "h-16 md:h-24 bg-gray-50/50 border-r border-b border-gray-100";
+                cell.className = "h-14 md:h-24 bg-gray-50/50 border-r border-b border-gray-100";
                 grid.appendChild(cell);
             }
 
@@ -1483,7 +1500,7 @@
                 
                 const cell = document.createElement('div');
                 // Adjusted height for mobile
-                let classes = "h-16 md:h-24 border-r border-b border-gray-100 p-1 md:p-2 relative group transition-colors flex flex-col items-center justify-start gap-1 ";
+                let classes = "h-14 md:h-24 border-r border-b border-gray-100 p-1 md:p-2 relative group transition-colors flex flex-col items-center justify-start gap-1 ";
                 
                 if (isClassDay) {
                     classes += "bg-indigo-50/30 hover:bg-indigo-50 cursor-pointer ";
