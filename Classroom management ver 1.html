@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CWCC Classroom Manager</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Custom Scrollbar for the table */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        /* Remove arrows from number input */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        /* Smooth fade transition */
+        .fade-in {
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen flex overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
+
+    <!-- SIDEBAR: Class List -->
+    <aside class="w-72 bg-white border-r border-gray-200 flex flex-col shadow-sm z-20">
+        <div class="p-6 border-b border-gray-100 bg-gray-50/50">
+            <h1 class="text-lg font-bold text-gray-800 flex items-center gap-2 leading-tight">
+                <div class="p-1.5 bg-indigo-600 rounded text-white shadow-sm">
+                    <i class="ph ph-chalkboard-teacher text-lg"></i>
+                </div>
+                Classroom<br>Management App
+            </h1>
+            <p class="text-xs text-gray-400 mt-2 font-medium tracking-wide uppercase ml-1">CWCC (Beta Version)</p>
+        </div>
+
+        <div class="p-4">
+            <button onclick="openModal('classModal')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 group">
+                <i class="ph ph-plus-circle text-lg group-hover:scale-110 transition-transform"></i>
+                New Class
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-3 pb-4 space-y-1" id="classList">
+            <!-- Class items will be injected here -->
+        </div>
+
+        <!-- Data Management Section -->
+        <div class="p-4 border-t border-gray-100 space-y-2 bg-gray-50/50">
+            <h4 class="text-[10px] uppercase font-bold text-gray-400 mb-1 ml-1">System</h4>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="exportData()" class="text-xs text-gray-600 hover:text-indigo-600 bg-white hover:bg-indigo-50 py-2 rounded border border-gray-200 flex flex-col items-center justify-center gap-1 transition-all shadow-sm hover:shadow">
+                    <i class="ph ph-download-simple text-lg"></i> Backup
+                </button>
+                <button onclick="openModal('importModal')" class="text-xs text-gray-600 hover:text-indigo-600 bg-white hover:bg-indigo-50 py-2 rounded border border-gray-200 flex flex-col items-center justify-center gap-1 transition-all shadow-sm hover:shadow">
+                    <i class="ph ph-upload-simple text-lg"></i> Restore
+                </button>
+            </div>
+            
+            <button onclick="askClearAllData()" class="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 w-full text-center py-1.5 rounded transition-colors mt-2">
+                Reset All Data
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative">
+        
+        <!-- Empty State (When no class selected) -->
+        <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0">
+            <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 text-indigo-200 shadow-sm border border-gray-100">
+                <i class="ph ph-chalkboard-teacher text-5xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-700 mb-2">Welcome Back, Teacher</h2>
+            <p class="text-gray-500 max-w-md">Select a class from the sidebar or create a new one to start tracking performance.</p>
+        </div>
+
+        <!-- Class Dashboard (Hidden by default) -->
+        <div id="classDashboard" class="hidden flex-col h-full z-10 fade-in">
+            
+            <!-- Header -->
+            <header class="bg-white border-b border-gray-200 px-8 py-5 flex justify-between items-center shadow-sm sticky top-0 z-20">
+                <div>
+                    <h2 id="currentClassName" class="text-2xl font-bold text-gray-800 tracking-tight">Mathematics 101</h2>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        <p class="text-xs text-gray-500 font-medium uppercase tracking-wide" id="studentCountBadge">0 Students</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="askDeleteCurrentClass()" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-lg transition-colors" title="Delete This Class">
+                        <i class="ph ph-trash text-xl"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Tabs -->
+            <div class="px-8 mt-6">
+                <div class="flex border-b border-gray-200 space-x-6">
+                    <button id="tabStudents" onclick="switchTab('students')" class="pb-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-indigo-600 transition-colors flex items-center gap-2">
+                        <i class="ph ph-users"></i> Students
+                    </button>
+                    <button id="tabGradebook" onclick="switchTab('gradebook')" class="pb-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-indigo-600 transition-colors flex items-center gap-2">
+                        <i class="ph ph-exam"></i> Gradebook
+                    </button>
+                    <button id="tabTracker" onclick="switchTab('tracker')" class="pb-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-indigo-600 transition-colors flex items-center gap-2">
+                        <i class="ph ph-check-square-offset"></i> Materials
+                    </button>
+                    <button id="tabHomework" onclick="switchTab('homework')" class="pb-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-indigo-600 transition-colors flex items-center gap-2">
+                        <i class="ph ph-notebook"></i> Homework
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT: Students -->
+            <div id="viewStudents" class="flex-1 overflow-y-auto p-8">
+                <div class="max-w-5xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-gray-800">Student Roster</h3>
+                        <div class="flex gap-3">
+                            <button onclick="openModal('importStudentModal')" class="text-gray-600 bg-white border border-gray-200 hover:border-green-500 hover:text-green-700 shadow-sm px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
+                                <i class="ph ph-microsoft-excel-logo text-green-600 text-lg"></i> Import from Excel
+                            </button>
+                            <button onclick="openModal('studentModal')" class="text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-200 px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
+                                <i class="ph ph-user-plus text-lg"></i> Add Student
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold tracking-wider border-b border-gray-200">
+                                <tr>
+                                    <th class="px-6 py-4 w-24">Class</th>
+                                    <th class="px-6 py-4 w-20">No.</th>
+                                    <th class="px-6 py-4">Name</th>
+                                    <th class="px-6 py-4">ID / Reg No.</th>
+                                    <th class="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentListBody" class="divide-y divide-gray-100 text-sm">
+                                <!-- Student Rows -->
+                            </tbody>
+                        </table>
+                        <div id="noStudentsMsg" class="p-12 text-center text-gray-400 hidden flex flex-col items-center">
+                            <i class="ph ph-users-three text-4xl mb-3 text-gray-300"></i>
+                            <p>No students added yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT: Gradebook -->
+            <div id="viewGradebook" class="hidden flex-1 overflow-hidden flex flex-col">
+                <div class="px-8 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                        <i class="ph ph-info text-indigo-500"></i>
+                        <span>Grades update automatically.</span>
+                    </div>
+                    <button onclick="openModal('assignmentModal')" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-sm px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <i class="ph ph-plus text-indigo-600"></i> New Graded Assignment
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-auto relative bg-white">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-white sticky top-0 z-10 shadow-sm text-xs text-gray-500 uppercase font-semibold">
+                            <tr id="gradebookHeaderRow">
+                                <th class="px-4 py-3 bg-gray-50 border-b border-r border-gray-200 sticky left-0 z-20 w-56 min-w-[200px]">Student</th>
+                                <th class="px-4 py-3 bg-indigo-50/50 border-b border-r border-gray-200 w-24 text-indigo-700 text-center font-bold">Average</th>
+                                <!-- Assignments Headers injected here -->
+                            </tr>
+                        </thead>
+                        <tbody id="gradebookBody" class="text-sm divide-y divide-gray-100 bg-white">
+                            <!-- Grades Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT: Material Tracker -->
+            <div id="viewTracker" class="hidden flex-1 overflow-hidden flex flex-row p-6 gap-6">
+                <!-- Left: Calendar -->
+                <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 p-6 overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <i class="ph ph-calendar-check text-indigo-600 text-xl"></i> Attendance & Materials
+                            </h3>
+                            <p class="text-xs text-gray-500 mt-1">Click a colored day to log missing items.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="openModal('scheduleModal')" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md transition-colors flex items-center gap-2">
+                                <i class="ph ph-gear"></i> Schedule
+                            </button>
+                            <div class="flex items-center bg-gray-50 rounded-md border border-gray-200 p-1">
+                                <button onclick="changeMonth(-1)" class="p-1 hover:bg-white hover:shadow-sm rounded text-gray-600 transition-all"><i class="ph ph-caret-left"></i></button>
+                                <span id="calendarMonthLabel" class="text-sm font-semibold px-3 w-36 text-center tabular-nums">October 2023</span>
+                                <button onclick="changeMonth(1)" class="p-1 hover:bg-white hover:shadow-sm rounded text-gray-600 transition-all"><i class="ph ph-caret-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Grid -->
+                    <div class="border border-gray-100 rounded-lg overflow-hidden shadow-sm">
+                        <div class="calendar-grid bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold text-gray-400 text-center py-2 tracking-wider">
+                            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                        </div>
+                        <div id="calendarGrid" class="calendar-grid bg-white">
+                            <!-- Days injected here -->
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 flex gap-4 text-xs text-gray-500 font-medium">
+                        <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-indigo-100 border border-indigo-200 rounded-sm"></span> Class Day</div>
+                        <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-red-100 border border-red-200 rounded-sm"></span> Missing Record</div>
+                    </div>
+                </div>
+
+                <!-- Right: Stats -->
+                <div class="w-80 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+                    <div class="flex items-center gap-2 mb-1">
+                        <div class="p-1.5 bg-red-100 rounded-md text-red-600"><i class="ph ph-warning"></i></div>
+                        <h3 class="text-lg font-bold text-gray-800">Missing Log</h3>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 pl-9">Total infractions per student</p>
+                    
+                    <div class="flex-1 overflow-y-auto pr-1">
+                        <table class="w-full text-sm">
+                            <tbody id="trackerStatsBody" class="divide-y divide-gray-100">
+                                <!-- Stats injected here -->
+                            </tbody>
+                        </table>
+                        <div id="noTrackerStats" class="text-center text-gray-400 text-sm mt-10 italic">
+                            No logs recorded yet.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT: Homework Tracker -->
+            <div id="viewHomework" class="hidden flex-1 overflow-hidden flex flex-col bg-gray-50/50">
+                <!-- Sub Navigation -->
+                <div class="px-8 pt-4 pb-0 bg-white border-b border-gray-200 flex gap-8 z-10 sticky top-0">
+                    <button id="hwSubTabStream" onclick="switchHwSubTab('stream')" class="pb-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors flex items-center gap-2">
+                        <i class="ph ph-list-dashes"></i> Assignments List
+                    </button>
+                    <button id="hwSubTabReport" onclick="switchHwSubTab('report')" class="pb-3 text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-colors flex items-center gap-2">
+                        <i class="ph ph-warning-circle"></i> Penalty Report
+                    </button>
+                </div>
+
+                <div class="flex-1 relative overflow-hidden">
+                    <!-- VIEW 1: Homework Stream & Stats -->
+                    <div id="hwStreamView" class="absolute inset-0 flex flex-row p-6 gap-6 transition-opacity duration-200">
+                        <!-- Left: Homework Stream -->
+                        <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                        <i class="ph ph-notebook text-indigo-600 text-xl"></i> Homework Stream
+                                    </h3>
+                                    <p class="text-xs text-gray-500 mt-1">Manage assignments and track completion.</p>
+                                </div>
+                                <button onclick="openModal('homeworkModal')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-sm flex items-center gap-2">
+                                    <i class="ph ph-plus-circle text-lg"></i> New Homework
+                                </button>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto pr-2 space-y-3" id="homeworkList">
+                                <!-- Homework Cards injected here -->
+                            </div>
+                            <div id="noHomeworkMsg" class="hidden text-center text-gray-400 mt-10 italic">
+                                No homework assigned yet.
+                            </div>
+                        </div>
+
+                        <!-- Right: Homework Stats -->
+                        <div class="w-80 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="p-1.5 bg-orange-100 rounded-md text-orange-600"><i class="ph ph-chart-bar"></i></div>
+                                <h3 class="text-lg font-bold text-gray-800">Penalty Summary</h3>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-4 pl-9">Total missed assignments</p>
+                            
+                            <div class="flex-1 overflow-y-auto pr-1">
+                                <table class="w-full text-sm">
+                                    <tbody id="homeworkStatsBody" class="divide-y divide-gray-100">
+                                        <!-- Stats injected here -->
+                                    </tbody>
+                                </table>
+                                <div id="noHomeworkStats" class="text-center text-gray-400 text-sm mt-10 italic">
+                                    No penalties recorded.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VIEW 2: Missing Matrix Report -->
+                    <div id="hwReportView" class="absolute inset-0 hidden p-6 overflow-auto bg-gray-50/50">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-w-[600px]">
+                            <div class="p-5 border-b border-gray-200 bg-white flex justify-between items-center">
+                                <div>
+                                    <h3 class="font-bold text-gray-800 text-lg">Penalty Record</h3>
+                                    <p class="text-xs text-gray-500 mt-1">Manual overrides available. Click any number to edit.</p>
+                                </div>
+                            </div>
+                            <table class="w-full text-left border-collapse">
+                                <thead id="hwReportHeader" class="bg-gray-50">
+                                    <!-- Header injected via JS -->
+                                </thead>
+                                <tbody id="hwReportBody" class="text-sm divide-y divide-gray-100">
+                                    <!-- Body injected via JS -->
+                                </tbody>
+                            </table>
+                             <div id="noHwReportMsg" class="hidden p-12 text-center text-gray-400 italic">
+                                Add students and homework to see the report.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODALS -->
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmModal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 transform scale-95 transition-transform duration-200 border border-gray-100">
+            <div class="mb-5 text-center">
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3 text-red-600">
+                    <i class="ph ph-warning text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-800" id="confirmTitle">Confirm Action</h3>
+                <p class="text-sm text-gray-500 mt-2 leading-relaxed" id="confirmMessage">Are you sure?</p>
+            </div>
+            <div class="flex justify-center gap-3">
+                <button onclick="closeModal('confirmModal')" class="text-gray-600 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">Cancel</button>
+                <button id="confirmBtn" class="bg-red-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-red-700 shadow-sm transition-colors">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div id="alertModal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 transform scale-95 transition-transform duration-200 border border-gray-100">
+            <div class="mb-5 text-center">
+                <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3 text-indigo-600">
+                    <i class="ph ph-info text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-800" id="alertTitle">Notice</h3>
+                <p class="text-sm text-gray-500 mt-2" id="alertMessage">Done.</p>
+            </div>
+            <div class="flex justify-center">
+                <button onclick="closeModal('alertModal')" class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm transition-colors">Okay</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Student Modal -->
+    <div id="importStudentModal" class="fixed inset-0 bg-black/50 z-[55] hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-[600px] p-6 border border-gray-100">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">Import Students from Excel</h3>
+                    <p class="text-xs text-gray-500 mt-1">Copy columns directly from Excel and paste below.</p>
+                </div>
+                <div class="px-2 py-1 bg-gray-100 rounded text-[10px] font-mono text-gray-600 border border-gray-200">
+                    Class | No | Name | Name | ID
+                </div>
+            </div>
+            
+            <div class="p-1 bg-gray-100 border border-gray-200 rounded-lg mb-4">
+                <textarea id="importStudentText" rows="12" class="w-full p-3 text-xs font-mono bg-white border-0 rounded-md focus:ring-0 outline-none" placeholder="Paste data here..."></textarea>
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal('importStudentModal')" class="text-gray-500 hover:text-gray-700 px-4 py-2 text-sm font-medium">Cancel</button>
+                <button onclick="importStudentsFromText()" class="bg-green-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-green-700 font-medium shadow-sm flex items-center gap-2">
+                    <i class="ph ph-check"></i> Import Students
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import/Restore Data Modal -->
+    <div id="importModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-[500px] p-6 border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Restore Backup</h3>
+            <p class="text-xs text-gray-500 mb-6">Recover your data from a previously saved JSON file.</p>
+            
+            <div class="space-y-6">
+                <!-- Option 1: Paste Text -->
+                <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Paste Backup Code (Best for Preview)</label>
+                    <div class="p-1 bg-gray-100 border border-gray-200 rounded-lg">
+                        <textarea id="importText" rows="4" class="w-full p-3 text-xs font-mono bg-white border-0 rounded-md focus:ring-0 outline-none" placeholder='{"classes": [...]}'></textarea>
+                    </div>
+                    <button onclick="importDataText()" class="mt-3 w-full bg-indigo-600 text-white hover:bg-indigo-700 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">Restore from Text</button>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-gray-200"></div>
+                    <span class="flex-shrink-0 mx-4 text-gray-400 text-xs font-bold uppercase tracking-wide">OR</span>
+                    <div class="flex-grow border-t border-gray-200"></div>
+                </div>
+
+                <!-- Option 2: File Upload -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Upload File</label>
+                    <input type="file" id="importFile" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer" accept=".json" onclick="this.value=null" onchange="importDataFile(this)">
+                </div>
+            </div>
+
+            <div class="flex justify-end mt-6 pt-4 border-t border-gray-100">
+                <button onclick="closeModal('importModal')" class="text-gray-500 hover:text-gray-800 text-sm font-medium">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Class Modal -->
+    <div id="classModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 transform scale-95 transition-transform duration-200">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Create New Class</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Class Name</label>
+                    <input type="text" id="newClassName" placeholder="e.g. Science 4B" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow">
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeModal('classModal')" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">Cancel</button>
+                <button onclick="addClass()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="studentModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Add Single Student</h3>
+            <div class="space-y-3">
+                <div class="flex gap-3">
+                    <div class="w-1/2">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Class</label>
+                        <input type="text" id="newStudentClass" placeholder="1A" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div class="w-1/2">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">No.</label>
+                        <input type="text" id="newStudentNo" placeholder="10" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Full Name</label>
+                    <input type="text" id="newStudentName" placeholder="John Doe" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">ID (Optional)</label>
+                    <input type="text" id="newStudentID" placeholder="123456" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeModal('studentModal')" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">Cancel</button>
+                <button onclick="addStudent()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm">Add Student</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Assignment Modal -->
+    <div id="assignmentModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">New Graded Item</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Title</label>
+                    <input type="text" id="assignName" placeholder="e.g. Unit 1 Quiz" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex gap-3">
+                    <div class="w-1/2">
+                         <label class="block text-xs font-medium text-gray-500 mb-1">Max Points</label>
+                        <input type="number" id="assignMax" value="100" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div class="w-1/2">
+                         <label class="block text-xs font-medium text-gray-500 mb-1">Type</label>
+                        <select id="assignType" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                            <option value="Assignment">Assignment</option>
+                            <option value="Quiz">Quiz</option>
+                            <option value="Exam">Exam</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeModal('assignmentModal')" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">Cancel</button>
+                <button onclick="addAssignment()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Homework Modal -->
+    <div id="homeworkModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Assign Homework</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Task</label>
+                    <input type="text" id="hwTitle" placeholder="e.g. Read pg 40-50" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Due Date (Optional)</label>
+                    <input type="date" id="hwDate" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none text-gray-600">
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeModal('homeworkModal')" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">Cancel</button>
+                <button onclick="addHomework()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm">Assign</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Check Homework Modal -->
+    <div id="homeworkCheckModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-[600px] flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800" id="hwCheckTitle">Check Homework</h3>
+                    <div class="flex gap-4 mt-1 text-xs font-medium">
+                        <span class="flex items-center gap-1 text-green-600"><i class="ph ph-check-square"></i> Tick = Done</span>
+                        <span class="flex items-center gap-1 text-red-600"><i class="ph ph-flag"></i> Flag = Penalty</span>
+                    </div>
+                </div>
+                <button onclick="closeModal('homeworkCheckModal')" class="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 bg-gray-50">
+                <div id="hwStudentList" class="space-y-2">
+                    <!-- Rows injected here -->
+                </div>
+                <div id="hwEmptyState" class="hidden p-8 text-center text-gray-400">
+                    No students in this class yet.
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-100 flex justify-between items-center bg-white rounded-b-xl">
+                <button onclick="askDeleteHomework()" class="text-red-400 hover:text-red-600 text-sm font-medium px-2 flex items-center gap-1"><i class="ph ph-trash"></i> Delete Task</button>
+                <div class="flex gap-3">
+                    <button id="markAllBtn" onclick="markAllHomeworkDone()" class="text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <i id="markAllIcon" class="ph ph-checks"></i> <span id="markAllText">Mark All Done</span>
+                    </button>
+                    <button onclick="closeModal('homeworkCheckModal')" class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm">Done</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Modal -->
+    <div id="scheduleModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Class Schedule</h3>
+            <p class="text-xs text-gray-500 mb-6">Select the days this class meets weekly.</p>
+            
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <!-- Checkboxes -->
+                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
+                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="1"> 
+                    <span class="text-sm font-medium text-gray-700">Monday</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
+                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="2"> 
+                    <span class="text-sm font-medium text-gray-700">Tuesday</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
+                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="3"> 
+                    <span class="text-sm font-medium text-gray-700">Wednesday</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
+                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="4"> 
+                    <span class="text-sm font-medium text-gray-700">Thursday</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
+                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="5"> 
+                    <span class="text-sm font-medium text-gray-700">Friday</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
+                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="6"> 
+                    <span class="text-sm font-medium text-gray-700">Saturday</span>
+                </label>
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal('scheduleModal')" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">Cancel</button>
+                <button onclick="saveSchedule()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm">Save Schedule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Log Modal (Materials) -->
+    <div id="dayLogModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-[500px] flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800" id="logModalDateTitle">Material Check</h3>
+                    <p class="text-xs text-gray-500">Check the box if a student is <span class="font-bold text-red-600">missing materials</span>.</p>
+                </div>
+                <button onclick="closeModal('dayLogModal')" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 bg-gray-50">
+                <div id="logStudentList" class="space-y-2">
+                    <!-- Checkboxes injected here -->
+                </div>
+                <div id="logEmptyState" class="hidden p-8 text-center text-gray-400">
+                    No students in this class yet.
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-100 flex justify-end gap-3 bg-white rounded-b-xl">
+                <button onclick="closeModal('dayLogModal')" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">Cancel</button>
+                <button onclick="saveDayLog()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm">Save Log</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- APP STATE & STORAGE ---
+        let appData = {
+            classes: [],
+            selectedClassId: null
+        };
+        
+        let currentCalendarDate = new Date();
+        let selectedLogDate = null; 
+        let selectedHomeworkId = null; 
+        let currentHwTab = 'stream'; 
+        let pendingConfirmAction = null; // Stores function to run if confirmed
+
+        // Load data on startup
+        function loadData() {
+            const saved = localStorage.getItem('teacherAppData');
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                    // Data Migration
+                    appData.classes.forEach(c => {
+                        if (!c.schedule) c.schedule = []; 
+                        if (!c.materialLog) c.materialLog = {}; 
+                        if (!c.homeworks) c.homeworks = []; 
+                        c.homeworks.forEach(hw => {
+                            if(!hw.penalties) hw.penalties = {};
+                        });
+                    });
+                } catch(e) {
+                    console.error("Data parse error", e);
+                }
+            }
+            renderClassList();
+            if (appData.selectedClassId) {
+                renderClassView(appData.selectedClassId);
+            } else {
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.getElementById('classDashboard').classList.add('hidden');
+            }
+        }
+
+        // Save data to LocalStorage
+        function saveData() {
+            localStorage.setItem('teacherAppData', JSON.stringify(appData));
+        }
+
+        // --- SORTING FUNCTION ---
+        function sortClassStudents(cls) {
+            cls.students.sort((a, b) => {
+                // 1. Sort by Class Label (Natural Sort: 1A < 1B, 1 < 2 < 10)
+                const classA = (a.classLabel || "").toString().trim();
+                const classB = (b.classLabel || "").toString().trim();
+                
+                // Compare class strings naturally
+                const classComparison = classA.localeCompare(classB, undefined, { numeric: true, sensitivity: 'base' });
+                
+                if (classComparison !== 0) return classComparison;
+
+                // 2. Sort by Class Number
+                const numA = parseInt(a.classNo);
+                const numB = parseInt(b.classNo);
+
+                // If both are numbers, numeric compare
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    if (numA !== numB) return numA - numB;
+                }
+                
+                // Fallback: If numbers are equal (e.g. 2A vs 2B) or invalid, use natural string sort
+                return (a.classNo || "").toString().localeCompare((b.classNo || "").toString(), undefined, { numeric: true });
+            });
+        }
+
+        // --- CUSTOM MODAL UTILS ---
+        
+        function showAlert(title, message) {
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMessage').innerText = message;
+            openModal('alertModal');
+        }
+
+        function showConfirm(title, message, action) {
+            document.getElementById('confirmTitle').innerText = title;
+            document.getElementById('confirmMessage').innerText = message;
+            pendingConfirmAction = action;
+            
+            // Re-bind click event to ensure only one listener
+            const confirmBtn = document.getElementById('confirmBtn');
+            confirmBtn.onclick = function() {
+                if (pendingConfirmAction) pendingConfirmAction();
+                closeModal('confirmModal');
+                pendingConfirmAction = null;
+            };
+            
+            openModal('confirmModal');
+        }
+
+        // --- IMPORT STUDENTS FROM EXCEL ---
+        function importStudentsFromText() {
+            const rawText = document.getElementById('importStudentText').value.trim();
+            if (!rawText) {
+                showAlert("Error", "Please paste data from Excel.");
+                return;
+            }
+
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            if (!cls) return;
+
+            const lines = rawText.split('\n');
+            let addedCount = 0;
+
+            lines.forEach(line => {
+                // Excel copy-paste is Tab-separated
+                const cols = line.split('\t');
+                
+                // Structure: Class | No. | CName | Eng Name | ID | Group
+                if (cols.length < 4) return; 
+
+                const classLabel = cols[0]?.trim() || '';
+                const classNo = cols[1]?.trim() || '';
+                const name = cols[3]?.trim();
+                const studentId = cols[4]?.trim();
+
+                // Skip header row if detected
+                if (name && (name.toLowerCase() === 'name' || name.toLowerCase() === 'english name')) return;
+
+                if (name) {
+                    const newStudent = {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                        name: name,
+                        classLabel: classLabel,
+                        classNo: classNo,
+                        studentId: studentId || 'N/A'
+                    };
+                    cls.students.push(newStudent);
+                    cls.grades[newStudent.id] = {}; // Init grades
+                    addedCount++;
+                }
+            });
+
+            if (addedCount > 0) {
+                sortClassStudents(cls); // Sort immediately after import
+                saveData();
+                renderClassList(); // Update sidebar count
+                renderStudentList(cls);
+                renderGradebook(cls); 
+                renderTrackerStats(cls);
+                renderHomeworkStats(cls); 
+                if(currentHwTab === 'report') renderHomeworkReport(cls);
+                
+                closeModal('importStudentModal');
+                document.getElementById('importStudentText').value = ''; // Clear text
+                showAlert("Success", `Imported ${addedCount} students successfully.`);
+            } else {
+                showAlert("Warning", "No valid students found. Ensure you copied the columns correctly: Class | No | CName | Eng Name | ID | Group");
+            }
+        }
+
+        // --- DATA MANAGEMENT (EXPORT/IMPORT) ---
+        function exportData() {
+            const dataStr = JSON.stringify(appData, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const today = new Date().toISOString().split('T')[0];
+            a.download = `teacher_companion_backup_${today}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showAlert("Success", "Backup file downloaded.");
+        }
+
+        function restoreFromJSON(json) {
+            if (!json.classes) {
+                showAlert("Error", "Invalid file format.");
+                return;
+            }
+            
+            showConfirm("Restore Data?", "This will REPLACE all current data. Cannot be undone.", () => {
+                localStorage.setItem('teacherAppData', JSON.stringify(json));
+                appData = json;
+                appData.selectedClassId = null; // safe reset
+                localStorage.setItem('teacherAppData', JSON.stringify(appData));
+                
+                loadData(); 
+                closeModal('importModal');
+                showAlert("Restored", "Data restored successfully.");
+            });
+        }
+
+        // Option 1: File Input
+        function importDataFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    restoreFromJSON(json);
+                } catch (err) {
+                    showAlert("Error", "Invalid or corrupted JSON file.");
+                }
+                input.value = ''; // Reset input
+            };
+            reader.readAsText(file);
+        }
+
+        // Option 2: Text Paste
+        function importDataText() {
+            const text = document.getElementById('importText').value.trim();
+            if (!text) {
+                showAlert("Error", "Please paste the code first.");
+                return;
+            }
+            try {
+                const json = JSON.parse(text);
+                restoreFromJSON(json);
+            } catch(err) {
+                showAlert("Error", "Invalid JSON format.");
+            }
+        }
+
+        // --- CLASS MANAGEMENT ---
+        function addClass() {
+            const nameInput = document.getElementById('newClassName');
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            const newClass = {
+                id: Date.now().toString(),
+                name: name,
+                students: [], 
+                assignments: [], 
+                grades: {},
+                schedule: [1, 3, 5],
+                materialLog: {},
+                homeworks: []
+            };
+
+            appData.classes.push(newClass);
+            appData.selectedClassId = newClass.id;
+            
+            saveData();
+            renderClassList();
+            renderClassView(newClass.id);
+            
+            nameInput.value = '';
+            closeModal('classModal');
+        }
+
+        // Delete class logic
+        function askDeleteCurrentClass() {
+            showConfirm("Delete Class?", "This will wipe all students and data in this class.", () => {
+                appData.classes = appData.classes.filter(c => c.id !== appData.selectedClassId);
+                appData.selectedClassId = null;
+                saveData();
+                renderClassList();
+                document.getElementById('classDashboard').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+            });
+        }
+
+        function askDeleteClass(classId, event) {
+            if(event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+
+            showConfirm("Delete Class?", "Are you sure you want to delete this class?", () => {
+                appData.classes = appData.classes.filter(c => String(c.id) !== String(classId));
+                
+                if(String(appData.selectedClassId) === String(classId)) {
+                    appData.selectedClassId = null;
+                    document.getElementById('classDashboard').classList.add('hidden');
+                    document.getElementById('emptyState').classList.remove('hidden');
+                }
+                
+                saveData();
+                renderClassList();
+            });
+        }
+
+        function renderClassList() {
+            const listEl = document.getElementById('classList');
+            listEl.innerHTML = '';
+
+            appData.classes.forEach(cls => {
+                const isActive = cls.id === appData.selectedClassId;
+                const btn = document.createElement('div');
+                btn.className = `p-3 mb-1 rounded-lg cursor-pointer flex items-center justify-between group transition-all duration-200 ${isActive ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600 shadow-sm' : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'}`;
+                
+                btn.onclick = () => {
+                    appData.selectedClassId = cls.id;
+                    saveData();
+                    renderClassList();
+                    renderClassView(cls.id);
+                };
+                
+                const studentCount = cls.students.length;
+                
+                // Note: Removed opacity-0 from delete button to make it always visible/accessible
+                btn.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden flex-1">
+                        <i class="ph ${isActive ? 'ph-folder-open-fill' : 'ph-folder'} text-xl transition-colors"></i>
+                        <span class="font-semibold truncate text-sm">${cls.name}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold bg-white/80 px-2 py-0.5 rounded-full text-gray-400 border border-gray-100">${studentCount}</span>
+                        <button onclick="askDeleteClass('${cls.id}', event)" class="p-1.5 rounded hover:bg-red-50 hover:text-red-500 text-gray-300 transition-colors" title="Delete Class">
+                            <i class="ph ph-trash"></i>
+                        </button>
+                    </div>
+                `;
+                listEl.appendChild(btn);
+            });
+        }
+
+        // --- VIEW MANAGEMENT ---
+        function renderClassView(classId) {
+            const cls = appData.classes.find(c => c.id === classId);
+            if (!cls) return;
+
+            // Ensure backward compatibility
+            if(!cls.schedule) cls.schedule = [];
+            if(!cls.materialLog) cls.materialLog = {};
+            if(!cls.homeworks) cls.homeworks = [];
+
+            // Sort automatically whenever viewing
+            sortClassStudents(cls);
+            saveData(); // Save the sorted order
+
+            document.getElementById('emptyState').classList.add('hidden');
+            const dashboard = document.getElementById('classDashboard');
+            dashboard.classList.remove('hidden');
+            dashboard.classList.add('flex');
+
+            document.getElementById('currentClassName').innerText = cls.name;
+            document.getElementById('studentCountBadge').innerText = `${cls.students.length} Students`;
+
+            let activeTab = 'students';
+            if(!document.getElementById('viewGradebook').classList.contains('hidden')) activeTab = 'gradebook';
+            if(!document.getElementById('viewTracker').classList.contains('hidden')) activeTab = 'tracker';
+            if(!document.getElementById('viewHomework').classList.contains('hidden')) activeTab = 'homework';
+            
+            renderStudentList(cls);
+            renderGradebook(cls);
+            renderCalendar();
+            renderTrackerStats(cls);
+            renderHomeworkList(cls);
+            renderHomeworkStats(cls);
+            renderHomeworkReport(cls);
+        }
+
+        function switchTab(tabName) {
+            const tabs = ['tabStudents', 'tabGradebook', 'tabTracker', 'tabHomework'];
+            const views = ['viewStudents', 'viewGradebook', 'viewTracker', 'viewHomework'];
+
+            // Reset tabs
+            tabs.forEach(t => {
+                const el = document.getElementById(t);
+                el.classList.remove('text-indigo-600', 'border-indigo-600');
+                el.classList.add('text-gray-500', 'border-transparent');
+            });
+            // Hide all views
+            views.forEach(v => document.getElementById(v).classList.add('hidden'));
+
+            const activeTab = document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+            const activeView = document.getElementById('view' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+
+            activeTab.classList.add('text-indigo-600', 'border-indigo-600');
+            activeTab.classList.remove('text-gray-500', 'border-transparent');
+            activeView.classList.remove('hidden');
+
+            if (tabName === 'gradebook' || tabName === 'tracker' || tabName === 'homework') {
+                activeView.classList.add('flex');
+            }
+            
+            if (tabName === 'tracker') renderCalendar();
+        }
+
+        // --- HOMEWORK ---
+        function switchHwSubTab(tab) {
+            currentHwTab = tab;
+            const btnStream = document.getElementById('hwSubTabStream');
+            const btnReport = document.getElementById('hwSubTabReport');
+            const viewStream = document.getElementById('hwStreamView');
+            const viewReport = document.getElementById('hwReportView');
+
+            if (tab === 'stream') {
+                btnStream.classList.replace('text-gray-500', 'text-indigo-600');
+                btnStream.classList.replace('border-transparent', 'border-indigo-600');
+                btnReport.classList.replace('text-indigo-600', 'text-gray-500');
+                btnReport.classList.replace('border-indigo-600', 'border-transparent');
+                
+                viewStream.classList.remove('hidden');
+                viewReport.classList.add('hidden');
+            } else {
+                btnReport.classList.replace('text-gray-500', 'text-indigo-600');
+                btnReport.classList.replace('border-transparent', 'border-indigo-600');
+                btnStream.classList.replace('text-indigo-600', 'text-gray-500');
+                btnStream.classList.replace('border-indigo-600', 'border-transparent');
+
+                viewReport.classList.remove('hidden');
+                viewStream.classList.add('hidden');
+                
+                const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+                renderHomeworkReport(cls);
+            }
+        }
+
+        function renderHomeworkReport(cls) {
+            const thead = document.getElementById('hwReportHeader');
+            const tbody = document.getElementById('hwReportBody');
+            
+            if (cls.students.length === 0 || cls.homeworks.length === 0) {
+                 document.getElementById('noHwReportMsg').classList.remove('hidden');
+                 thead.innerHTML = '';
+                 tbody.innerHTML = '';
+                 return;
+            }
+            document.getElementById('noHwReportMsg').classList.add('hidden');
+
+            // Headers
+            let headerHTML = '<th class="px-4 py-3 bg-gray-50 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200 sticky left-0 bg-gray-50 z-10 shadow-sm">Student</th>';
+            cls.homeworks.forEach(hw => {
+                headerHTML += `<th class="px-4 py-3 bg-gray-50 text-center text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200 max-w-[150px] truncate" title="${hw.title}">${hw.title}</th>`;
+            });
+            headerHTML += '<th class="px-4 py-3 bg-gray-50 text-center text-xs font-bold text-indigo-600 uppercase tracking-wider border-b border-gray-200 sticky right-0 bg-gray-50 z-10 shadow-sm">Total Penalties</th>';
+            thead.innerHTML = `<tr>${headerHTML}</tr>`;
+
+            // Body
+            tbody.innerHTML = '';
+            cls.students.forEach(s => {
+                let totalPenalty = 0;
+                // Updated Name Cell to show Class info more visibly
+                let rowHTML = `<td class="px-4 py-3 border-b border-gray-100 sticky left-0 bg-white z-10 shadow-sm">
+                    <div class="font-medium text-gray-800">${s.name}</div>
+                    <div class="text-xs text-indigo-600 font-bold mt-0.5">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                </td>`;
+                
+                cls.homeworks.forEach(hw => {
+                    const penalty = hw.penalties && hw.penalties[s.id] ? hw.penalties[s.id] : 0;
+                    totalPenalty += parseFloat(penalty);
+                    
+                    // Editable Cell
+                    rowHTML += `
+                        <td class="px-2 py-2 border-b border-gray-100 text-center">
+                            <input type="number" 
+                                min="0" step="1"
+                                class="w-12 h-8 text-center bg-gray-50 focus:bg-white border border-transparent focus:border-indigo-400 rounded outline-none transition-all hover:bg-white hover:shadow-sm font-medium ${penalty > 0 ? 'text-red-600' : 'text-gray-400'}" 
+                                value="${penalty}"
+                                onchange="updateHomeworkPenalty('${s.id}', '${hw.id}', this.value)"
+                            >
+                        </td>
+                    `;
+                });
+                
+                rowHTML += `<td class="px-4 py-3 border-b border-gray-100 text-center font-bold ${totalPenalty > 0 ? 'text-red-600' : 'text-green-600'} bg-gray-50 sticky right-0 z-10 shadow-sm">${totalPenalty}</td>`;
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors";
+                tr.innerHTML = rowHTML;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateHomeworkPenalty(studentId, hwId, value) {
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            const hw = cls.homeworks.find(h => h.id === hwId);
+            
+            if(!hw.penalties) hw.penalties = {};
+            hw.penalties[studentId] = parseFloat(value) || 0;
+            
+            saveData();
+            renderHomeworkReport(cls);
+            renderHomeworkStats(cls);
+        }
+
+        function addHomework() {
+            const title = document.getElementById('hwTitle').value.trim();
+            const date = document.getElementById('hwDate').value;
+            
+            if (!title) return;
+
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            cls.homeworks.unshift({ 
+                id: Date.now().toString(),
+                title: title,
+                dueDate: date || null,
+                completed: [],
+                penalties: {}
+            });
+            
+            saveData();
+            renderHomeworkList(cls);
+            renderHomeworkStats(cls);
+            if(currentHwTab === 'report') renderHomeworkReport(cls);
+            
+            document.getElementById('hwTitle').value = '';
+            document.getElementById('hwDate').value = '';
+            closeModal('homeworkModal');
+        }
+
+        function renderHomeworkList(cls) {
+            const container = document.getElementById('homeworkList');
+            container.innerHTML = '';
+
+            if (cls.homeworks.length === 0) {
+                document.getElementById('noHomeworkMsg').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('noHomeworkMsg').classList.add('hidden');
+
+            cls.homeworks.forEach(hw => {
+                const totalStudents = cls.students.length;
+                const doneCount = hw.completed.length;
+                const isAllDone = totalStudents > 0 && doneCount === totalStudents;
+                
+                const card = document.createElement('div');
+                card.className = "border border-gray-200 rounded-lg p-4 hover:border-indigo-300 hover:shadow-sm cursor-pointer transition-all bg-white group";
+                card.onclick = () => openHomeworkCheck(hw.id);
+
+                let dateDisplay = '';
+                if(hw.dueDate) {
+                    const d = new Date(hw.dueDate);
+                    dateDisplay = `<div class="text-xs text-gray-400 mt-1 flex items-center gap-1"><i class="ph ph-calendar"></i> Due: ${d.toLocaleDateString()}</div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-medium text-gray-800">${hw.title}</h4>
+                            ${dateDisplay}
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <span class="text-xs font-bold px-2 py-1 rounded-full ${isAllDone ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">
+                                ${doneCount} / ${totalStudents} Done
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-100 h-1.5 rounded-full mt-3 overflow-hidden">
+                        <div class="h-full ${isAllDone ? 'bg-green-500' : 'bg-indigo-500'}" style="width: ${(doneCount / (totalStudents || 1)) * 100}%"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openHomeworkCheck(hwId) {
+            selectedHomeworkId = hwId;
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            const hw = cls.homeworks.find(h => h.id === hwId);
+            
+            if(!hw.penalties) hw.penalties = {};
+
+            document.getElementById('hwCheckTitle').innerText = `Check: ${hw.title}`;
+
+            const listContainer = document.getElementById('hwStudentList');
+            listContainer.innerHTML = '';
+            
+            // Logic to update Mark All Button State
+            const allDone = cls.students.length > 0 && cls.students.every(s => hw.completed.includes(s.id));
+            const btnText = document.getElementById('markAllText');
+            const btnIcon = document.getElementById('markAllIcon');
+            
+            if(allDone) {
+                btnText.innerText = "Unmark All";
+                btnIcon.classList.remove('ph-checks');
+                btnIcon.classList.add('ph-x');
+            } else {
+                btnText.innerText = "Mark All Done";
+                btnIcon.classList.remove('ph-x');
+                btnIcon.classList.add('ph-checks');
+            }
+
+            if (cls.students.length === 0) {
+                document.getElementById('hwEmptyState').classList.remove('hidden');
+            } else {
+                document.getElementById('hwEmptyState').classList.add('hidden');
+                
+                cls.students.forEach(s => {
+                    const isDone = hw.completed.includes(s.id);
+                    const penalty = hw.penalties[s.id] || 0;
+                    
+                    const row = document.createElement('div');
+                    row.className = `flex items-center justify-between p-3 rounded-lg border transition-all mb-2 ${isDone ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`;
+                    
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                                ${s.name.charAt(0)}
+                            </div>
+                            <div>
+                                <div class="font-medium ${isDone ? 'text-green-700' : 'text-gray-700'}">${s.name}</div>
+                                <div class="text-xs text-indigo-600 font-bold">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                                ${penalty > 0 ? `<div class="text-[10px] text-red-600 font-bold bg-red-100 px-1.5 rounded inline-block mt-1">-${penalty} pts</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                             <!-- Penalty Flag Button -->
+                            <button onclick="flagPenalty('${s.id}')" title="Flag as Missing/Late (+1 Penalty)" class="p-2 rounded-full hover:bg-red-100 text-gray-300 hover:text-red-500 transition-colors">
+                                <i class="ph ph-warning-circle text-lg"></i>
+                            </button>
+                            <!-- Done Checkbox -->
+                            <div class="h-6 w-px bg-gray-200 mx-1"></div>
+                            <input type="checkbox" class="w-5 h-5 text-green-600 rounded border-gray-300 focus:ring-green-500 hw-check" value="${s.id}" ${isDone ? 'checked' : ''} onchange="toggleHomeworkCompletion('${s.id}')">
+                        </div>
+                    `;
+                    listContainer.appendChild(row);
+                });
+            }
+            
+            openModal('homeworkCheckModal');
+        }
+
+        function toggleHomeworkCompletion(studentId) {
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            const hw = cls.homeworks.find(h => h.id === selectedHomeworkId);
+            
+            const idx = hw.completed.indexOf(studentId);
+            if (idx === -1) {
+                hw.completed.push(studentId);
+            } else {
+                hw.completed.splice(idx, 1);
+            }
+            saveData();
+            openHomeworkCheck(selectedHomeworkId);
+            renderHomeworkList(cls);
+            renderHomeworkStats(cls);
+            if(currentHwTab === 'report') renderHomeworkReport(cls);
+        }
+
+        function markAllHomeworkDone() {
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            const hw = cls.homeworks.find(h => h.id === selectedHomeworkId);
+            
+            // Check if all students are currently done
+            const allDone = cls.students.length > 0 && cls.students.every(s => hw.completed.includes(s.id));
+
+            if (allDone) {
+                // If all are done, unmark everyone
+                hw.completed = [];
+            } else {
+                // Otherwise, mark everyone as done
+                hw.completed = cls.students.map(s => s.id);
+            }
+            
+            saveData();
+            // Refresh views
+            openHomeworkCheck(selectedHomeworkId);
+            renderHomeworkList(cls);
+            renderHomeworkStats(cls);
+            if(currentHwTab === 'report') renderHomeworkReport(cls);
+        }
+
+        function flagPenalty(studentId) {
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            const hw = cls.homeworks.find(h => h.id === selectedHomeworkId);
+            
+            if(!hw.penalties) hw.penalties = {};
+            const current = hw.penalties[studentId] || 0;
+            hw.penalties[studentId] = current + 1;
+            
+            saveData();
+            openHomeworkCheck(selectedHomeworkId);
+            renderHomeworkStats(cls);
+            if(currentHwTab === 'report') renderHomeworkReport(cls);
+        }
+
+        function askDeleteHomework() {
+            showConfirm("Delete Homework?", "This task will be removed permanently.", () => {
+                const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+                cls.homeworks = cls.homeworks.filter(h => h.id !== selectedHomeworkId);
+                
+                saveData();
+                closeModal('homeworkCheckModal');
+                renderHomeworkList(cls);
+                renderHomeworkStats(cls);
+                if(currentHwTab === 'report') renderHomeworkReport(cls);
+            });
+        }
+
+        function renderHomeworkStats(cls) {
+            const tbody = document.getElementById('homeworkStatsBody');
+            tbody.innerHTML = '';
+            
+            const stats = cls.students.map(s => {
+                let totalPenalty = 0;
+                cls.homeworks.forEach(hw => {
+                    if (hw.penalties && hw.penalties[s.id]) {
+                        totalPenalty += hw.penalties[s.id];
+                    }
+                });
+                return { ...s, totalPenalty };
+            }).sort((a, b) => b.totalPenalty - a.totalPenalty);
+
+            const hasAnyPenalty = stats.some(s => s.totalPenalty > 0);
+
+            if (!hasAnyPenalty && cls.homeworks.length > 0) {
+                 document.getElementById('noHomeworkStats').innerText = "Perfect! No penalties.";
+                 document.getElementById('noHomeworkStats').classList.remove('hidden');
+                 return;
+            } else if (cls.homeworks.length === 0) {
+                 document.getElementById('noHomeworkStats').innerText = "No homeworks assigned.";
+                 document.getElementById('noHomeworkStats').classList.remove('hidden');
+                 return;
+            }
+            
+            document.getElementById('noHomeworkStats').classList.add('hidden');
+
+            stats.forEach(s => {
+                if (s.totalPenalty === 0 && stats.length > 5) return; 
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-1 text-gray-700 font-medium border-b border-gray-50 flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-gray-100 text-[10px] flex items-center justify-center text-gray-500">${s.name.charAt(0)}</div>
+                        <div>
+                            <div class="leading-tight">${s.name}</div>
+                            <div class="text-xs text-indigo-600 font-bold">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-1 text-right border-b border-gray-50">
+                        <span class="inline-block px-2 py-1 rounded-full text-xs font-bold ${s.totalPenalty > 0 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400'}">
+                            -${s.totalPenalty}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- TRACKER & CALENDAR ---
+
+        function changeMonth(offset) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            if (!cls) return;
+
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            
+            document.getElementById('calendarMonthLabel').innerText = new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDayIndex = firstDay.getDay(); 
+
+            for (let i = 0; i < startDayIndex; i++) {
+                const cell = document.createElement('div');
+                cell.className = "h-24 bg-gray-50/50 border-r border-b border-gray-100";
+                grid.appendChild(cell);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dayOfWeek = date.getDay();
+                const dateString = `${year}-${String(month+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                const isClassDay = cls.schedule.includes(dayOfWeek);
+                const hasLogs = cls.materialLog[dateString] && cls.materialLog[dateString].length > 0;
+                
+                const cell = document.createElement('div');
+                let classes = "h-24 border-r border-b border-gray-100 p-2 relative group transition-colors flex flex-col items-center justify-start gap-1 ";
+                
+                if (isClassDay) {
+                    classes += "bg-indigo-50/30 hover:bg-indigo-50 cursor-pointer ";
+                    cell.onclick = () => openDayLog(dateString);
+                } else {
+                    classes += "bg-white text-gray-300 ";
+                }
+
+                cell.className = classes;
+                cell.innerHTML = `<span class="text-sm font-medium ${isClassDay ? 'text-gray-700' : 'text-gray-300'}">${day}</span>`;
+
+                if (isClassDay) {
+                    if (hasLogs) {
+                         cell.innerHTML += `
+                            <div class="mt-1 px-2 py-1 bg-red-100 text-red-600 rounded text-[10px] font-bold shadow-sm border border-red-200">
+                                ${cls.materialLog[dateString].length} Missing
+                            </div>
+                         `;
+                    } else {
+                        cell.innerHTML += `
+                            <div class="mt-2 text-indigo-400 opacity-0 group-hover:opacity-100 text-[10px] transition-opacity font-medium">
+                                Log Data
+                            </div>
+                        `;
+                    }
+                }
+                grid.appendChild(cell);
+            }
+        }
+
+        function openDayLog(dateString) {
+            selectedLogDate = dateString;
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            document.getElementById('logModalDateTitle').innerText = `Material Check: ${dateString}`;
+            const listContainer = document.getElementById('logStudentList');
+            listContainer.innerHTML = '';
+            
+            if (cls.students.length === 0) {
+                document.getElementById('logEmptyState').classList.remove('hidden');
+            } else {
+                document.getElementById('logEmptyState').classList.add('hidden');
+                const missingStudentIds = cls.materialLog[dateString] || [];
+                cls.students.forEach(s => {
+                    const isMissing = missingStudentIds.includes(s.id);
+                    const item = document.createElement('label');
+                    item.className = `flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isMissing ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`;
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">${s.name.charAt(0)}</div>
+                            <div>
+                                <span class="font-medium ${isMissing ? 'text-red-700' : 'text-gray-700'}">${s.name}</span>
+                                <div class="text-xs text-indigo-600 font-bold">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                            </div>
+                        </div>
+                        <input type="checkbox" class="w-5 h-5 text-red-600 rounded border-gray-300 focus:ring-red-500 day-log-check" value="${s.id}" ${isMissing ? 'checked' : ''}>
+                    `;
+                    const checkbox = item.querySelector('input');
+                    checkbox.addEventListener('change', (e) => {
+                        if(e.target.checked) {
+                            item.classList.replace('bg-white', 'bg-red-50');
+                            item.classList.replace('border-gray-200', 'border-red-200');
+                            item.querySelector('span.font-medium').classList.add('text-red-700');
+                        } else {
+                            item.classList.replace('bg-red-50', 'bg-white');
+                            item.classList.replace('border-red-200', 'border-gray-200');
+                            item.querySelector('span.font-medium').classList.remove('text-red-700');
+                        }
+                    });
+                    listContainer.appendChild(item);
+                });
+            }
+            openModal('dayLogModal');
+        }
+
+        function saveDayLog() {
+            if (!selectedLogDate) return;
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            const checkboxes = document.querySelectorAll('.day-log-check:checked');
+            const missingIds = Array.from(checkboxes).map(cb => cb.value);
+            cls.materialLog[selectedLogDate] = missingIds;
+            saveData();
+            closeModal('dayLogModal');
+            renderCalendar();
+            renderTrackerStats(cls);
+        }
+
+        function saveSchedule() {
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            const checkboxes = document.querySelectorAll('.schedule-day-check:checked');
+            cls.schedule = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            saveData();
+            closeModal('scheduleModal');
+            renderCalendar();
+        }
+
+        function prepareScheduleModal() {
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            if (!cls) return;
+            document.querySelectorAll('.schedule-day-check').forEach(cb => {
+                cb.checked = cls.schedule.includes(parseInt(cb.value));
+            });
+        }
+
+        function renderTrackerStats(cls) {
+            const tbody = document.getElementById('trackerStatsBody');
+            tbody.innerHTML = '';
+            const counts = {};
+            cls.students.forEach(s => counts[s.id] = 0);
+            Object.values(cls.materialLog).forEach(missingIds => {
+                missingIds.forEach(id => { if (counts[id] !== undefined) counts[id]++; });
+            });
+            const sortedStudents = cls.students.map(s => ({ ...s, missedCount: counts[s.id] || 0 })).sort((a, b) => b.missedCount - a.missedCount);
+
+            if (sortedStudents.length === 0 || sortedStudents.every(s => s.missedCount === 0)) {
+                document.getElementById('noTrackerStats').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('noTrackerStats').classList.add('hidden');
+
+            sortedStudents.forEach(s => {
+                if (s.missedCount === 0) return;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-1 text-gray-700 font-medium border-b border-gray-50 flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-gray-100 text-[10px] flex items-center justify-center text-gray-500">${s.name.charAt(0)}</div>
+                        <div>
+                            <div class="leading-tight">${s.name}</div>
+                            <div class="text-xs text-indigo-600 font-bold">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-1 text-right border-b border-gray-50">
+                        <span class="inline-block px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-600">${s.missedCount}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- STUDENT MANAGEMENT ---
+        function addStudent() {
+            const nameInput = document.getElementById('newStudentName');
+            const idInput = document.getElementById('newStudentID');
+            const classInput = document.getElementById('newStudentClass');
+            const noInput = document.getElementById('newStudentNo');
+            
+            if (!nameInput.value.trim()) return;
+
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            const newStudent = {
+                id: Date.now().toString(),
+                name: nameInput.value.trim(),
+                classLabel: classInput.value.trim(),
+                classNo: noInput.value.trim(),
+                studentId: idInput.value.trim() || 'N/A'
+            };
+            cls.students.push(newStudent);
+            cls.grades[newStudent.id] = {};
+
+            sortClassStudents(cls); // Sort immediately
+            saveData();
+            renderClassList();
+            renderStudentList(cls);
+            renderGradebook(cls);
+            renderTrackerStats(cls);
+            renderHomeworkStats(cls); 
+            if(currentHwTab === 'report') renderHomeworkReport(cls);
+
+            nameInput.value = '';
+            idInput.value = '';
+            classInput.value = '';
+            noInput.value = '';
+            closeModal('studentModal');
+        }
+
+        function askRemoveStudent(studentId) {
+            showConfirm("Remove Student?", "This will delete the student and their grades.", () => {
+                const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+                cls.students = cls.students.filter(s => s.id !== studentId);
+                delete cls.grades[studentId];
+                saveData();
+                renderClassList();
+                renderStudentList(cls);
+                renderGradebook(cls);
+                renderTrackerStats(cls);
+                renderHomeworkStats(cls);
+                if(currentHwTab === 'report') renderHomeworkReport(cls);
+            });
+        }
+
+        function renderStudentList(cls) {
+            const tbody = document.getElementById('studentListBody');
+            tbody.innerHTML = '';
+            if (cls.students.length === 0) {
+                document.getElementById('noStudentsMsg').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('noStudentsMsg').classList.add('hidden');
+            cls.students.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 group transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 text-gray-800 font-bold">${s.classLabel || '-'}</td>
+                    <td class="px-6 py-4 text-gray-800 font-bold">${s.classNo || '-'}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900">${s.name}</td>
+                    <td class="px-6 py-4 text-gray-500">${s.studentId}</td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="askRemoveStudent('${s.id}')" class="text-gray-300 hover:text-red-500 transition-colors">
+                            <i class="ph ph-trash text-lg"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- GRADEBOOK & ASSIGNMENTS ---
+        function addAssignment() {
+            const name = document.getElementById('assignName').value.trim();
+            const max = parseInt(document.getElementById('assignMax').value) || 100;
+            const type = document.getElementById('assignType').value;
+            if (!name) return;
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            cls.assignments.push({ id: Date.now().toString(), name: name, maxScore: max, type: type });
+            saveData();
+            renderGradebook(cls);
+            document.getElementById('assignName').value = '';
+            closeModal('assignmentModal');
+        }
+
+        function askDeleteAssignment(assignId) {
+            showConfirm("Delete Assignment?", "This will remove the column and all entered grades.", () => {
+                const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+                cls.assignments = cls.assignments.filter(a => a.id !== assignId);
+                Object.keys(cls.grades).forEach(studentId => {
+                    if (cls.grades[studentId][assignId]) delete cls.grades[studentId][assignId];
+                });
+                saveData();
+                renderGradebook(cls);
+            });
+        }
+
+        function updateGrade(studentId, assignId, value) {
+            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            if (!cls.grades[studentId]) cls.grades[studentId] = {};
+            cls.grades[studentId][assignId] = value;
+            saveData();
+            const avgCell = document.getElementById(`avg-${studentId}`);
+            if (avgCell) {
+                const avg = calculateStudentAverage(cls, studentId);
+                avgCell.innerText = avg + '%';
+                updateAverageColor(avgCell, avg);
+            }
+        }
+
+        function calculateStudentAverage(cls, studentId) {
+            const studentGrades = cls.grades[studentId] || {};
+            let totalEarned = 0;
+            let totalMax = 0;
+            cls.assignments.forEach(assign => {
+                const score = studentGrades[assign.id];
+                if (score !== undefined && score !== "") {
+                    totalEarned += parseFloat(score);
+                    totalMax += parseFloat(assign.maxScore);
+                }
+            });
+            if (totalMax === 0) return '-';
+            return Math.round((totalEarned / totalMax) * 100);
+        }
+        
+        function updateAverageColor(element, avg) {
+            element.classList.remove('text-green-600', 'text-yellow-600', 'text-red-600', 'text-gray-400');
+            if (avg === '-') {
+                element.classList.add('text-gray-400');
+                return;
+            }
+            if (avg >= 90) element.classList.add('text-green-600');
+            else if (avg >= 70) element.classList.add('text-yellow-600');
+            else element.classList.add('text-red-600');
+        }
+
+        function renderGradebook(cls) {
+            const headerRow = document.getElementById('gradebookHeaderRow');
+            const tbody = document.getElementById('gradebookBody');
+            headerRow.innerHTML = `
+                <th class="px-4 py-3 bg-gray-50 border-b border-r border-gray-200 sticky left-0 z-20 w-48 min-w-[150px] text-gray-700">Student</th>
+                <th class="px-4 py-3 bg-indigo-50 border-b border-r border-gray-200 w-24 text-indigo-700 text-center font-bold">Avg</th>
+            `;
+            cls.assignments.forEach(assign => {
+                const th = document.createElement('th');
+                th.className = "px-4 py-3 bg-gray-50 border-b border-r border-gray-200 min-w-[120px] font-medium text-gray-600 group relative";
+                th.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <span class="truncate max-w-[100px]" title="${assign.name}">${assign.name}</span>
+                        <span class="text-[10px] text-gray-400 font-normal">/${assign.maxScore} (${assign.type})</span>
+                        <button onclick="askDeleteAssignment('${assign.id}')" class="absolute top-1 right-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><i class="ph ph-x"></i></button>
+                    </div>
+                `;
+                headerRow.appendChild(th);
+            });
+            tbody.innerHTML = '';
+            cls.students.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors";
+                const avg = calculateStudentAverage(cls, s.id);
+                let avgColorClass = 'text-gray-400';
+                if (avg !== '-') {
+                     if (avg >= 90) avgColorClass = 'text-green-600 font-bold';
+                     else if (avg >= 70) avgColorClass = 'text-yellow-600 font-medium';
+                     else avgColorClass = 'text-red-600 font-medium';
+                }
+                let rowHTML = `
+                    <td class="px-4 py-3 border-b border-r border-gray-100 bg-white sticky left-0 z-10 text-gray-800">
+                        <div class="font-medium">${s.name}</div>
+                        <div class="text-xs text-indigo-600 font-bold">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                    </td>
+                    <td id="avg-${s.id}" class="px-4 py-3 border-b border-r border-gray-100 text-center bg-indigo-50/30 ${avgColorClass}">${avg === '-' ? '-' : avg + '%'}</td>
+                `;
+                cls.assignments.forEach(assign => {
+                    const savedScore = (cls.grades[s.id] && cls.grades[s.id][assign.id]) ? cls.grades[s.id][assign.id] : '';
+                    rowHTML += `
+                        <td class="px-2 py-2 border-b border-r border-gray-100 text-center">
+                            <input type="number" class="w-full h-8 text-center bg-transparent focus:bg-white border border-transparent focus:border-indigo-400 rounded outline-none transition-all placeholder-gray-200 hover:bg-gray-50" placeholder="-" value="${savedScore}" onchange="updateGrade('${s.id}', '${assign.id}', this.value)">
+                        </td>
+                    `;
+                });
+                tr.innerHTML = rowHTML;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- UTILS & MODALS ---
+        function openModal(id) {
+            if (id === 'scheduleModal') prepareScheduleModal();
+            const modal = document.getElementById(id);
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                if (modal.querySelector('div')) {
+                    modal.querySelector('div').classList.remove('scale-95');
+                    modal.querySelector('div').classList.add('scale-100');
+                }
+            }, 10);
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.add('opacity-0');
+            if (modal.querySelector('div')) {
+                modal.querySelector('div').classList.remove('scale-100');
+                modal.querySelector('div').classList.add('scale-95');
+            }
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function askClearAllData() {
+            showConfirm("Reset Everything?", "DANGER: This will wipe all classes, students, and grades permanently.", () => {
+                localStorage.removeItem('teacherAppData');
+                appData = { classes: [], selectedClassId: null };
+                renderClassList();
+                document.getElementById('classDashboard').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+                showAlert("Reset Complete", "All data has been cleared.");
+            });
+        }
+
+        // Initialize
+        loadData();
+
+    </script>
+</body>
+</html>
