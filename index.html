@@ -41,13 +41,14 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 h-screen flex overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
+<body class="bg-gray-100 text-gray-800 h-[100dvh] flex overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
 
-    <!-- MOBILE OVERLAY -->
-    <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden transition-opacity opacity-0"></div>
+    <!-- MOBILE OVERLAY (Closes sidebar when clicking outside) -->
+    <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden transition-opacity"></div>
 
     <!-- SIDEBAR: Class List -->
-    <aside id="appSidebar" class="w-72 bg-white border-r border-gray-200 flex flex-col shadow-xl md:shadow-sm z-30 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out">
+    <!-- Updated classes for mobile responsiveness: fixed on mobile, hidden by default (-translate-x-full) -->
+    <aside id="mainSidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 flex flex-col shadow-xl md:shadow-sm transition-transform duration-300 transform -translate-x-full md:translate-x-0 md:static md:inset-auto">
         <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-start">
             <div>
                 <h1 class="text-lg font-bold text-gray-800 flex items-center gap-2 leading-tight">
@@ -58,8 +59,8 @@
                 </h1>
                 <p class="text-xs text-gray-400 mt-2 font-medium tracking-wide uppercase ml-1">CWCC (Beta Version)</p>
             </div>
-            <!-- Close button for mobile -->
-            <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-gray-600 p-1">
+            <!-- Mobile Close Button -->
+            <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-gray-600">
                 <i class="ph ph-x text-xl"></i>
             </button>
         </div>
@@ -96,48 +97,53 @@
     <!-- MAIN CONTENT -->
     <main class="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50 relative w-full">
         
+        <!-- HEADER (Visible on all screens now) -->
+        <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shrink-0 z-20 shadow-sm">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="text-gray-600 hover:text-indigo-600 p-1 rounded-md hover:bg-gray-100 transition-colors" title="Toggle Menu">
+                    <i class="ph ph-list text-2xl"></i>
+                </button>
+                <!-- Title visible only on mobile to avoid duplication with sidebar on desktop -->
+                <span class="font-bold text-gray-700 text-sm md:hidden">Classroom Manager</span>
+            </div>
+            <!-- Spacer or right-side actions if needed -->
+            <div class="w-8"></div> 
+        </div>
+
         <!-- Empty State (When no class selected) -->
         <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0">
-            <!-- Mobile Menu Trigger -->
-            <button onclick="toggleSidebar()" class="absolute top-4 left-4 md:hidden p-2 bg-white rounded-lg shadow text-gray-600">
-                <i class="ph ph-list text-2xl"></i>
-            </button>
-
             <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 text-indigo-200 shadow-sm border border-gray-100">
                 <i class="ph ph-chalkboard-teacher text-5xl"></i>
             </div>
-            <h2 class="text-2xl font-bold text-gray-700 mb-2">Welcome Back, Teacher</h2>
-            <p class="text-gray-500 max-w-md">Select a class from the sidebar or create a new one to start tracking performance.</p>
+            <h2 class="text-2xl font-bold text-gray-700 mb-2">Welcome Back</h2>
+            <p class="text-gray-500 max-w-md">Open the menu to select a class or create a new one.</p>
+            <button onclick="toggleSidebar()" class="mt-6 md:hidden text-indigo-600 font-medium flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
+                <i class="ph ph-list"></i> Open Menu
+            </button>
         </div>
 
         <!-- Class Dashboard (Hidden by default) -->
-        <div id="classDashboard" class="hidden flex-col h-full z-10 fade-in w-full">
+        <div id="classDashboard" class="hidden flex-col h-full z-10 fade-in">
             
             <!-- Header -->
-            <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-20 shrink-0">
-                <div class="flex items-center gap-3">
-                    <!-- Mobile Menu Trigger -->
-                    <button onclick="toggleSidebar()" class="md:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                        <i class="ph ph-list text-2xl"></i>
-                    </button>
-                    <div>
-                        <h2 id="currentClassName" class="text-xl md:text-2xl font-bold text-gray-800 tracking-tight truncate max-w-[200px] md:max-w-none">Mathematics 101</h2>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide" id="studentCountBadge">0 Students</p>
-                        </div>
+            <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 md:py-5 flex justify-between items-center shadow-sm sticky top-0 z-20">
+                <div>
+                    <h2 id="currentClassName" class="text-xl md:text-2xl font-bold text-gray-800 tracking-tight truncate max-w-[200px] md:max-w-md">Mathematics 101</h2>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        <p class="text-xs text-gray-500 font-medium uppercase tracking-wide" id="studentCountBadge">0 Students</p>
                     </div>
                 </div>
-                <div class="flex gap-3">
-                    <button onclick="askDeleteCurrentClass()" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-lg transition-colors" title="Delete This Class">
+                <div class="flex gap-2 md:gap-3">
+                    <button onclick="askDeleteCurrentClass()" class="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Delete This Class">
                         <i class="ph ph-trash text-xl"></i>
                     </button>
                 </div>
             </header>
 
             <!-- Tabs -->
-            <div class="px-4 md:px-8 mt-4 md:mt-6 shrink-0 overflow-x-auto scrollbar-hide">
-                <div class="flex border-b border-gray-200 space-x-4 md:space-x-6 min-w-max">
+            <div class="px-4 md:px-8 mt-4 md:mt-6 overflow-x-auto scrollbar-hide">
+                <div class="flex border-b border-gray-200 space-x-6 min-w-max">
                     <button id="tabStudents" onclick="switchTab('students')" class="pb-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-indigo-600 transition-colors flex items-center gap-2">
                         <i class="ph ph-users"></i> Students
                     </button>
@@ -154,37 +160,36 @@
             </div>
 
             <!-- TAB CONTENT: Students -->
-            <div id="viewStudents" class="flex-1 overflow-auto p-4 md:p-8">
+            <div id="viewStudents" class="flex-1 overflow-y-auto p-4 md:p-8">
                 <div class="max-w-5xl mx-auto">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h3 class="text-lg font-bold text-gray-800">Student Roster</h3>
                         <div class="flex gap-3 w-full md:w-auto">
                             <button onclick="openModal('importStudentModal')" class="flex-1 md:flex-none justify-center text-gray-600 bg-white border border-gray-200 hover:border-green-500 hover:text-green-700 shadow-sm px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
-                                <i class="ph ph-microsoft-excel-logo text-green-600 text-lg"></i> <span class="hidden sm:inline">Import from</span> Excel
+                                <i class="ph ph-microsoft-excel-logo text-green-600 text-lg"></i> <span class="hidden md:inline">Import from Excel</span><span class="md:hidden">Import</span>
                             </button>
                             <button onclick="openModal('studentModal')" class="flex-1 md:flex-none justify-center text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-200 px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
-                                <i class="ph ph-user-plus text-lg"></i> Add <span class="hidden sm:inline">Student</span>
+                                <i class="ph ph-user-plus text-lg"></i> Add
                             </button>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse min-w-[600px]">
-                                <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold tracking-wider border-b border-gray-200">
-                                    <tr>
-                                        <th class="px-6 py-4 w-24">Class</th>
-                                        <th class="px-6 py-4 w-20">No.</th>
-                                        <th class="px-6 py-4">Name</th>
-                                        <th class="px-6 py-4">ID / Reg No.</th>
-                                        <th class="px-6 py-4 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="studentListBody" class="divide-y divide-gray-100 text-sm">
-                                    <!-- Student Rows -->
-                                </tbody>
-                            </table>
-                        </div>
+                    <!-- Added overflow-x-auto for horizontal scrolling on mobile -->
+                    <div class="bg-white rounded-xl shadow border border-gray-200 overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[600px]">
+                            <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-semibold tracking-wider border-b border-gray-200">
+                                <tr>
+                                    <th class="px-6 py-4 w-24">Class</th>
+                                    <th class="px-6 py-4 w-20">No.</th>
+                                    <th class="px-6 py-4">Name</th>
+                                    <th class="px-6 py-4">ID / Reg No.</th>
+                                    <th class="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentListBody" class="divide-y divide-gray-100 text-sm">
+                                <!-- Student Rows -->
+                            </tbody>
+                        </table>
                         <div id="noStudentsMsg" class="p-12 text-center text-gray-400 hidden flex flex-col items-center">
                             <i class="ph ph-users-three text-4xl mb-3 text-gray-300"></i>
                             <p>No students added yet.</p>
@@ -195,18 +200,19 @@
 
             <!-- TAB CONTENT: Gradebook -->
             <div id="viewGradebook" class="hidden flex-1 overflow-hidden flex flex-col">
-                <div class="px-4 md:px-8 py-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center shrink-0 gap-3">
+                <div class="px-4 md:px-8 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                     <div class="flex items-center gap-2 text-sm text-gray-600">
                         <i class="ph ph-info text-indigo-500"></i>
-                        <span>Grades update automatically.</span>
+                        <span class="hidden md:inline">Grades update automatically.</span>
+                        <span class="md:hidden">Auto-save</span>
                     </div>
-                    <button onclick="openModal('assignmentModal')" class="w-full md:w-auto bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-sm px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                        <i class="ph ph-plus text-indigo-600"></i> New Graded Assignment
+                    <button onclick="openModal('assignmentModal')" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-sm px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <i class="ph ph-plus text-indigo-600"></i> <span class="hidden md:inline">New Graded Assignment</span><span class="md:hidden">New Grade</span>
                     </button>
                 </div>
 
                 <div class="flex-1 overflow-auto relative bg-white">
-                    <table class="w-full text-left border-collapse min-w-max">
+                    <table class="w-full text-left border-collapse">
                         <thead class="bg-white sticky top-0 z-10 shadow-sm text-xs text-gray-500 uppercase font-semibold">
                             <tr id="gradebookHeaderRow">
                                 <th class="px-4 py-3 bg-gray-50 border-b border-r border-gray-200 sticky left-0 z-20 w-56 min-w-[200px]">Student</th>
@@ -222,23 +228,23 @@
             </div>
 
             <!-- TAB CONTENT: Material Tracker -->
-            <div id="viewTracker" class="hidden flex-1 overflow-hidden flex flex-col md:flex-row p-4 md:p-6 gap-4 md:gap-6">
+            <div id="viewTracker" class="hidden flex-1 overflow-hidden flex flex-col md:flex-row p-4 md:p-6 gap-6">
                 <!-- Left: Calendar -->
-                <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 overflow-y-auto min-h-[350px]">
-                    <div class="flex justify-between items-center mb-6">
+                <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 overflow-y-auto">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div>
                             <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                <i class="ph ph-calendar-check text-indigo-600 text-xl"></i> <span class="hidden sm:inline">Attendance &</span> Materials
+                                <i class="ph ph-calendar-check text-indigo-600 text-xl"></i> Attendance
                             </h3>
                             <p class="text-xs text-gray-500 mt-1">Click a colored day to log missing items.</p>
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="openModal('scheduleModal')" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md transition-colors flex items-center gap-2">
-                                <i class="ph ph-gear"></i> <span class="hidden sm:inline">Schedule</span>
+                        <div class="flex gap-2 w-full md:w-auto">
+                            <button onclick="openModal('scheduleModal')" class="flex-1 md:flex-none text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md transition-colors flex items-center justify-center gap-2">
+                                <i class="ph ph-gear"></i> Schedule
                             </button>
                             <div class="flex items-center bg-gray-50 rounded-md border border-gray-200 p-1">
                                 <button onclick="changeMonth(-1)" class="p-1 hover:bg-white hover:shadow-sm rounded text-gray-600 transition-all"><i class="ph ph-caret-left"></i></button>
-                                <span id="calendarMonthLabel" class="text-sm font-semibold px-3 w-36 text-center tabular-nums">October 2023</span>
+                                <span id="calendarMonthLabel" class="text-sm font-semibold px-3 w-28 md:w-36 text-center tabular-nums">October 2023</span>
                                 <button onclick="changeMonth(1)" class="p-1 hover:bg-white hover:shadow-sm rounded text-gray-600 transition-all"><i class="ph ph-caret-right"></i></button>
                             </div>
                         </div>
@@ -254,14 +260,14 @@
                         </div>
                     </div>
                     
-                    <div class="mt-4 flex gap-4 text-xs text-gray-500 font-medium">
+                    <div class="mt-4 flex flex-wrap gap-4 text-xs text-gray-500 font-medium">
                         <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-indigo-100 border border-indigo-200 rounded-sm"></span> Class Day</div>
                         <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-red-100 border border-red-200 rounded-sm"></span> Missing Record</div>
                     </div>
                 </div>
 
                 <!-- Right: Stats -->
-                <div class="w-full md:w-80 bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 flex flex-col shrink-0 h-64 md:h-auto">
+                <div class="w-full md:w-80 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-64 md:h-auto">
                     <div class="flex items-center gap-2 mb-1">
                         <div class="p-1.5 bg-red-100 rounded-md text-red-600"><i class="ph ph-warning"></i></div>
                         <h3 class="text-lg font-bold text-gray-800">Missing Log</h3>
@@ -284,7 +290,7 @@
             <!-- TAB CONTENT: Homework Tracker -->
             <div id="viewHomework" class="hidden flex-1 overflow-hidden flex flex-col bg-gray-50/50">
                 <!-- Sub Navigation -->
-                <div class="px-4 md:px-8 pt-4 pb-0 bg-white border-b border-gray-200 flex gap-6 z-10 sticky top-0 overflow-x-auto scrollbar-hide">
+                <div class="px-4 md:px-8 pt-4 pb-0 bg-white border-b border-gray-200 flex gap-4 md:gap-8 z-10 sticky top-0 overflow-x-auto scrollbar-hide">
                     <button id="hwSubTabStream" onclick="switchHwSubTab('stream')" class="pb-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors flex items-center gap-2 whitespace-nowrap">
                         <i class="ph ph-list-dashes"></i> Assignments List
                     </button>
@@ -295,7 +301,7 @@
 
                 <div class="flex-1 relative overflow-hidden">
                     <!-- VIEW 1: Homework Stream & Stats -->
-                    <div id="hwStreamView" class="absolute inset-0 flex flex-col md:flex-row p-4 md:p-6 gap-4 md:gap-6 transition-opacity duration-200 overflow-y-auto md:overflow-hidden">
+                    <div id="hwStreamView" class="absolute inset-0 flex flex-col md:flex-row p-4 md:p-6 gap-6 transition-opacity duration-200 overflow-y-auto md:overflow-hidden">
                         <!-- Left: Homework Stream -->
                         <div class="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 min-h-[300px]">
                             <div class="flex justify-between items-center mb-6">
@@ -306,7 +312,7 @@
                                     <p class="text-xs text-gray-500 mt-1">Manage assignments and track completion.</p>
                                 </div>
                                 <button onclick="openModal('homeworkModal')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-sm flex items-center gap-2">
-                                    <i class="ph ph-plus-circle text-lg"></i> <span class="hidden sm:inline">New Homework</span>
+                                    <i class="ph ph-plus-circle text-lg"></i> <span class="hidden md:inline">New Homework</span><span class="md:hidden">New</span>
                                 </button>
                             </div>
 
@@ -319,7 +325,7 @@
                         </div>
 
                         <!-- Right: Homework Stats -->
-                        <div class="w-full md:w-80 bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 flex flex-col shrink-0 h-64 md:h-auto">
+                        <div class="w-full md:w-80 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-64 md:h-auto">
                             <div class="flex items-center gap-2 mb-1">
                                 <div class="p-1.5 bg-orange-100 rounded-md text-orange-600"><i class="ph ph-chart-bar"></i></div>
                                 <h3 class="text-lg font-bold text-gray-800">Penalty Summary</h3>
@@ -341,7 +347,7 @@
 
                     <!-- VIEW 2: Missing Matrix Report -->
                     <div id="hwReportView" class="absolute inset-0 hidden p-4 md:p-6 overflow-auto bg-gray-50/50">
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-w-[800px]">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-w-[600px]">
                             <div class="p-5 border-b border-gray-200 bg-white flex justify-between items-center">
                                 <div>
                                     <h3 class="font-bold text-gray-800 text-lg">Penalty Record</h3>
@@ -371,7 +377,7 @@
 
     <!-- Custom Confirmation Modal -->
     <div id="confirmModal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 transform scale-95 transition-transform duration-200 border border-gray-100">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 transform scale-95 transition-transform duration-200 border border-gray-100 m-4">
             <div class="mb-5 text-center">
                 <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3 text-red-600">
                     <i class="ph ph-warning text-2xl"></i>
@@ -388,7 +394,7 @@
 
     <!-- Custom Alert Modal -->
     <div id="alertModal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 transform scale-95 transition-transform duration-200 border border-gray-100">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 transform scale-95 transition-transform duration-200 border border-gray-100 m-4">
             <div class="mb-5 text-center">
                 <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3 text-indigo-600">
                     <i class="ph ph-info text-2xl"></i>
@@ -404,19 +410,19 @@
 
     <!-- Import Student Modal -->
     <div id="importStudentModal" class="fixed inset-0 bg-black/50 z-[55] hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-[600px] max-w-[90vw] p-6 border border-gray-100">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-[600px] p-6 border border-gray-100 m-4">
             <div class="flex justify-between items-start mb-4">
                 <div>
                     <h3 class="text-lg font-bold text-gray-800">Import Students from Excel</h3>
                     <p class="text-xs text-gray-500 mt-1">Copy columns directly from Excel and paste below.</p>
                 </div>
-                <div class="px-2 py-1 bg-gray-100 rounded text-[10px] font-mono text-gray-600 border border-gray-200">
+                <div class="px-2 py-1 bg-gray-100 rounded text-[10px] font-mono text-gray-600 border border-gray-200 hidden sm:block">
                     Class | No | Name | Name | ID
                 </div>
             </div>
             
             <div class="p-1 bg-gray-100 border border-gray-200 rounded-lg mb-4">
-                <textarea id="importStudentText" rows="10" class="w-full p-3 text-xs font-mono bg-white border-0 rounded-md focus:ring-0 outline-none" placeholder="Paste data here..."></textarea>
+                <textarea id="importStudentText" rows="12" class="w-full p-3 text-xs font-mono bg-white border-0 rounded-md focus:ring-0 outline-none" placeholder="Paste data here..."></textarea>
             </div>
 
             <div class="flex justify-end gap-3">
@@ -430,7 +436,7 @@
 
     <!-- Import/Restore Data Modal -->
     <div id="importModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-[500px] max-w-[90vw] p-6 border border-gray-100">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-[500px] p-6 border border-gray-100 m-4">
             <h3 class="text-lg font-bold text-gray-800 mb-2">Restore Backup</h3>
             <p class="text-xs text-gray-500 mb-6">Recover your data from a previously saved JSON file.</p>
             
@@ -465,7 +471,7 @@
 
     <!-- Add Class Modal -->
     <div id="classModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 transform scale-95 transition-transform duration-200">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 transform scale-95 transition-transform duration-200 m-4">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Create New Class</h3>
             <div class="space-y-4">
                 <div>
@@ -482,7 +488,7 @@
 
     <!-- Add Student Modal -->
     <div id="studentModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-96 p-6">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 m-4">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Add Single Student</h3>
             <div class="space-y-3">
                 <div class="flex gap-3">
@@ -513,7 +519,7 @@
 
     <!-- Add Assignment Modal -->
     <div id="assignmentModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-96 p-6">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 m-4">
             <h3 class="text-lg font-bold text-gray-800 mb-4">New Graded Item</h3>
             <div class="space-y-4">
                 <div>
@@ -544,7 +550,7 @@
 
     <!-- Create Homework Modal -->
     <div id="homeworkModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-96 p-6">
+        <div class="bg-white rounded-xl shadow-2xl w-96 p-6 m-4">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Assign Homework</h3>
             <div class="space-y-4">
                 <div>
@@ -565,7 +571,7 @@
 
     <!-- Check Homework Modal -->
     <div id="homeworkCheckModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-[600px] max-w-[90vw] flex flex-col max-h-[85vh]">
+        <div class="bg-white rounded-xl shadow-2xl w-[600px] flex flex-col max-h-[85vh] m-4">
             <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
                 <div>
                     <h3 class="text-lg font-bold text-gray-800" id="hwCheckTitle">Check Homework</h3>
@@ -586,13 +592,13 @@
                 </div>
             </div>
 
-            <div class="p-4 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center bg-white rounded-b-xl gap-3">
-                <button onclick="askDeleteHomework()" class="text-red-400 hover:text-red-600 text-sm font-medium px-2 flex items-center gap-1 w-full md:w-auto justify-center"><i class="ph ph-trash"></i> Delete Task</button>
-                <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                    <button id="markAllBtn" onclick="markAllHomeworkDone()" class="text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 w-full md:w-auto">
+            <div class="p-4 border-t border-gray-100 flex justify-between items-center bg-white rounded-b-xl flex-wrap gap-2">
+                <button onclick="askDeleteHomework()" class="text-red-400 hover:text-red-600 text-sm font-medium px-2 flex items-center gap-1"><i class="ph ph-trash"></i> Delete Task</button>
+                <div class="flex gap-3 ml-auto">
+                    <button id="markAllBtn" onclick="markAllHomeworkDone()" class="text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                         <i id="markAllIcon" class="ph ph-checks"></i> <span id="markAllText">Mark All Done</span>
                     </button>
-                    <button onclick="closeModal('homeworkCheckModal')" class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm w-full md:w-auto">Done</button>
+                    <button onclick="closeModal('homeworkCheckModal')" class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm">Done</button>
                 </div>
             </div>
         </div>
@@ -600,58 +606,52 @@
 
     <!-- Schedule Modal -->
     <div id="scheduleModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-96 p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Class Schedule</h3>
-            <p class="text-xs text-gray-500 mb-6">Select the days this class meets weekly.</p>
+        <div class="bg-white rounded-lg shadow-2xl w-96 p-6">
+            <h3 class="text-lg font-semibold mb-2 text-gray-800">Class Schedule</h3>
+            <p class="text-xs text-gray-500 mb-4">Select the days this class meets weekly.</p>
             
             <div class="grid grid-cols-2 gap-3 mb-6">
                 <!-- Checkboxes -->
-                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
-                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="1"> 
-                    <span class="text-sm font-medium text-gray-700">Monday</span>
+                <label class="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded border border-gray-200">
+                    <input type="checkbox" class="schedule-day-check text-indigo-600 rounded focus:ring-indigo-500" value="1"> <span class="text-sm">Monday</span>
                 </label>
-                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
-                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="2"> 
-                    <span class="text-sm font-medium text-gray-700">Tuesday</span>
+                <label class="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded border border-gray-200">
+                    <input type="checkbox" class="schedule-day-check text-indigo-600 rounded focus:ring-indigo-500" value="2"> <span class="text-sm">Tuesday</span>
                 </label>
-                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
-                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="3"> 
-                    <span class="text-sm font-medium text-gray-700">Wednesday</span>
+                <label class="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded border border-gray-200">
+                    <input type="checkbox" class="schedule-day-check text-indigo-600 rounded focus:ring-indigo-500" value="3"> <span class="text-sm">Wednesday</span>
                 </label>
-                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
-                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="4"> 
-                    <span class="text-sm font-medium text-gray-700">Thursday</span>
+                <label class="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded border border-gray-200">
+                    <input type="checkbox" class="schedule-day-check text-indigo-600 rounded focus:ring-indigo-500" value="4"> <span class="text-sm">Thursday</span>
                 </label>
-                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
-                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="5"> 
-                    <span class="text-sm font-medium text-gray-700">Friday</span>
+                <label class="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded border border-gray-200">
+                    <input type="checkbox" class="schedule-day-check text-indigo-600 rounded focus:ring-indigo-500" value="5"> <span class="text-sm">Friday</span>
                 </label>
-                <label class="flex items-center gap-3 cursor-pointer p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors">
-                    <input type="checkbox" class="schedule-day-check w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300" value="6"> 
-                    <span class="text-sm font-medium text-gray-700">Saturday</span>
+                <label class="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded border border-gray-200">
+                    <input type="checkbox" class="schedule-day-check text-indigo-600 rounded focus:ring-indigo-500" value="6"> <span class="text-sm">Saturday</span>
                 </label>
             </div>
 
-            <div class="flex justify-end gap-3">
-                <button onclick="closeModal('scheduleModal')" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">Cancel</button>
-                <button onclick="saveSchedule()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm">Save Schedule</button>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('scheduleModal')" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm">Cancel</button>
+                <button onclick="saveSchedule()" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700">Save Schedule</button>
             </div>
         </div>
     </div>
 
     <!-- Daily Log Modal (Materials) -->
     <div id="dayLogModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-200 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-[500px] max-w-[90vw] flex flex-col max-h-[85vh]">
-            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
+        <div class="bg-white rounded-lg shadow-xl w-[500px] flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-lg">
                 <div>
                     <h3 class="text-lg font-bold text-gray-800" id="logModalDateTitle">Material Check</h3>
-                    <p class="text-xs text-gray-500">Check the box if a student is <span class="font-bold text-red-600">missing materials</span>.</p>
+                    <p class="text-xs text-gray-500">Check the box if a student is missing materials.</p>
                 </div>
                 <button onclick="closeModal('dayLogModal')" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
             </div>
             
-            <div class="flex-1 overflow-y-auto p-4 bg-gray-50">
-                <div id="logStudentList" class="space-y-2">
+            <div class="flex-1 overflow-y-auto p-2">
+                <div id="logStudentList" class="space-y-1">
                     <!-- Checkboxes injected here -->
                 </div>
                 <div id="logEmptyState" class="hidden p-8 text-center text-gray-400">
@@ -659,9 +659,9 @@
                 </div>
             </div>
 
-            <div class="p-4 border-t border-gray-100 flex justify-end gap-3 bg-white rounded-b-xl">
-                <button onclick="closeModal('dayLogModal')" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">Cancel</button>
-                <button onclick="saveDayLog()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-indigo-700 font-medium shadow-sm">Save Log</button>
+            <div class="p-4 border-t border-gray-100 flex justify-end gap-2">
+                <button onclick="closeModal('dayLogModal')" class="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm">Cancel</button>
+                <button onclick="saveDayLog()" class="bg-indigo-600 text-white px-6 py-2 rounded-md text-sm hover:bg-indigo-700 font-medium">Save Log</button>
             </div>
         </div>
     </div>
@@ -737,6 +737,36 @@
                 return (a.classNo || "").toString().localeCompare((b.classNo || "").toString(), undefined, { numeric: true });
             });
         }
+
+        // --- UI UTILS ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('mainSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            const isDesktop = window.innerWidth >= 768;
+
+            if (isDesktop) {
+                sidebar.classList.toggle('hidden');
+                overlay.classList.add('hidden'); 
+            } else {
+                if (sidebar.classList.contains('-translate-x-full')) {
+                    sidebar.classList.remove('-translate-x-full');
+                    overlay.classList.remove('hidden');
+                } else {
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                }
+            }
+        }
+        
+        // Ensure sidebar visibility resets correctly on resize
+        window.onresize = function() {
+            if (window.innerWidth < 768) {
+                // On mobile, ensure 'hidden' class from desktop toggle is removed 
+                // so the mobile transform logic works
+                document.getElementById('mainSidebar').classList.remove('hidden');
+            }
+        };
 
         // --- CUSTOM MODAL UTILS ---
         
@@ -916,6 +946,11 @@
             
             nameInput.value = '';
             closeModal('classModal');
+            
+            // Auto close sidebar on mobile when creating class
+            if(window.innerWidth < 768) {
+                toggleSidebar();
+            }
         }
 
         // Delete class logic
@@ -964,6 +999,11 @@
                     saveData();
                     renderClassList();
                     renderClassView(cls.id);
+                    
+                    // Auto close sidebar on mobile
+                    if(window.innerWidth < 768) {
+                        toggleSidebar();
+                    }
                 };
                 
                 const studentCount = cls.students.length;
@@ -1262,7 +1302,7 @@
                             </div>
                             <div>
                                 <div class="font-medium ${isDone ? 'text-green-700' : 'text-gray-700'}">${s.name}</div>
-                                <div class="text-xs text-indigo-600 font-bold">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                                <div class="text-xs text-indigo-600 font-medium">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
                                 ${penalty > 0 ? `<div class="text-[10px] text-red-600 font-bold bg-red-100 px-1.5 rounded inline-block mt-1">-${penalty} pts</div>` : ''}
                             </div>
                         </div>
@@ -1387,7 +1427,7 @@
                         <div class="w-6 h-6 rounded-full bg-gray-100 text-[10px] flex items-center justify-center text-gray-500">${s.name.charAt(0)}</div>
                         <div>
                             <div class="leading-tight">${s.name}</div>
-                            <div class="text-xs text-indigo-600 font-bold">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                            <div class="text-xs text-indigo-600 font-medium">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
                         </div>
                     </td>
                     <td class="py-3 px-1 text-right border-b border-gray-50">
@@ -1491,7 +1531,7 @@
                             <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">${s.name.charAt(0)}</div>
                             <div>
                                 <span class="font-medium ${isMissing ? 'text-red-700' : 'text-gray-700'}">${s.name}</span>
-                                <div class="text-xs text-indigo-600 font-bold">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                                <div class="text-xs text-indigo-600 font-medium">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
                             </div>
                         </div>
                         <input type="checkbox" class="w-5 h-5 text-red-600 rounded border-gray-300 focus:ring-red-500 day-log-check" value="${s.id}" ${isMissing ? 'checked' : ''}>
@@ -1567,7 +1607,7 @@
                         <div class="w-6 h-6 rounded-full bg-gray-100 text-[10px] flex items-center justify-center text-gray-500">${s.name.charAt(0)}</div>
                         <div>
                             <div class="leading-tight">${s.name}</div>
-                            <div class="text-xs text-indigo-600 font-bold">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                            <div class="text-xs text-indigo-600 font-medium">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
                         </div>
                     </td>
                     <td class="py-3 px-1 text-right border-b border-gray-50">
@@ -1753,7 +1793,7 @@
                 let rowHTML = `
                     <td class="px-4 py-3 border-b border-r border-gray-100 bg-white sticky left-0 z-10 text-gray-800">
                         <div class="font-medium">${s.name}</div>
-                        <div class="text-xs text-indigo-600 font-bold">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
+                        <div class="text-xs text-indigo-600 font-medium">${s.classLabel || '-'} ${s.classNo ? '#' + s.classNo : ''}</div>
                     </td>
                     <td id="avg-${s.id}" class="px-4 py-3 border-b border-r border-gray-100 text-center bg-indigo-50/30 ${avgColorClass}">${avg === '-' ? '-' : avg + '%'}</td>
                 `;
@@ -1771,23 +1811,6 @@
         }
 
         // --- UTILS & MODALS ---
-        function toggleSidebar() {
-            const sidebar = document.getElementById('appSidebar');
-            const overlay = document.getElementById('sidebarOverlay');
-            
-            if (sidebar.classList.contains('-translate-x-full')) {
-                // Open
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.remove('opacity-0'), 10); // Fade in
-            } else {
-                // Close
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('opacity-0');
-                setTimeout(() => overlay.classList.add('hidden'), 200); // Wait for transition
-            }
-        }
-
         function openModal(id) {
             if (id === 'scheduleModal') prepareScheduleModal();
             const modal = document.getElementById(id);
