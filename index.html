@@ -351,7 +351,7 @@
                 <div id="viewSeating" class="absolute inset-0 hidden overflow-hidden flex-col">
                      <div class="px-6 py-4 border-b border-slate-200 bg-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm z-10">
                          <div>
-                             <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                             <h3 class="font-bold text-slate-800 flex items-center gap-2 text-xl">
                                  <span class="p-1.5 bg-violet-100 text-violet-600 rounded-lg"><i class="ph ph-chair text-lg"></i></span>
                                  Seating Plan
                              </h3>
@@ -483,7 +483,7 @@
     
     <!-- Restore Modal -->
     <div id="importModal" class="fixed inset-0 bg-slate-900/40 z-[55] hidden flex items-center justify-center glass-modal"><div class="bg-white rounded-2xl w-[500px] p-8 m-4 shadow-2xl"><h3 class="text-xl font-bold text-slate-800 mb-2">Restore Backup</h3><p class="text-sm text-slate-500 mb-6">Paste your backup code below to restore data.</p><textarea id="importText" class="w-full h-32 border border-slate-200 bg-slate-50 rounded-xl p-4 text-xs font-mono mb-6 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Paste JSON code here..."></textarea><div class="flex gap-3"><button onclick="closeModal('importModal')" class="flex-1 text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 py-3 rounded-xl font-bold text-sm">Cancel</button><button onclick="importDataText()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-sm shadow-md">Restore Data</button></div></div></div>
-
+    
     <script>
         // --- APP STATE & STORAGE ---
         let appData = { classes: [], selectedClassId: null };
@@ -1039,7 +1039,7 @@
              for (let r = 0; r < cls.seating.rows; r++) {
                 for (let c = 0; c < cls.seating.cols; c++) {
                     const key = `${r}-${c}`;
-                    const val = cls.seating.layout[k];
+                    const val = cls.seating.layout[key];
                     const d = document.createElement('div');
                     if (val === 'walkway' || !val) {
                          d.className = "w-[60px] h-[60px] bg-transparent"; 
@@ -1094,7 +1094,7 @@
                     <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold text-xs flex items-center justify-center group-hover:bg-white group-hover:shadow-sm">${s.classNo}</div>
                     <div class="font-medium text-slate-700">${s.name}</div>
                  </td>
-                 <td class="py-3 px-2 text-right"><span class="bg-rose-100 text-rose-600 px-2 py-1 rounded-lg text-xs font-bold">${s.c}</span></td>
+                 <td class="py-3 px-2 text-right"><span class="bg-rose-100 text-rose-600 px-2 py-1 rounded-lg text-xs font-bold">-${s.c}</span></td>
                  `;
                  b.appendChild(tr);
              });
@@ -1138,6 +1138,7 @@
              document.getElementById('noHomeworkMsg').classList.add('hidden');
              cls.homeworks.forEach(hw => {
                  const doneCount = hw.completed.length;
+                 const pct = cls.students.length ? (doneCount / cls.students.length) * 100 : 0;
                  const d = document.createElement('div');
                  d.className = "p-4 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:border-amber-400 hover:shadow-md transition-all mb-3 group";
                  d.innerHTML = `
@@ -1148,7 +1149,7 @@
                     </div>
                     <div class="bg-slate-100 text-slate-500 px-2 py-1 rounded-lg text-xs font-bold group-hover:bg-amber-100 group-hover:text-amber-700 transition-colors">${doneCount} / ${cls.students.length}</div>
                  </div>
-                 <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden"><div class="bg-amber-500 h-full" style="width: ${(doneCount/cls.students.length)*100}%"></div></div>
+                 <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden"><div class="bg-amber-500 h-full" style="width: ${pct}%"></div></div>
                  `;
                  d.onclick = () => openHomeworkCheck(hw.id);
                  list.appendChild(d);
@@ -1187,7 +1188,7 @@
                      let cellContent = isDone ? '<i class="ph ph-check text-green-500"></i>' : '<span class="w-2 h-2 bg-slate-200 rounded-full inline-block"></span>';
                      if(p > 0) cellContent = `<span class="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded text-xs">-${p}</span>`;
                      // Editable on click? Let's make it a number input for penalty like before
-                     r += `<td class="px-2 py-2 border-b border-slate-100 text-center"><input type="number" class="w-8 text-center bg-transparent outline-none text-sm ${p>0?'text-rose-600 font-bold':''}" value="${p}" onchange="updateHomeworkPenalty('${s.id}','${hw.id}',this.value)"></td>`;
+                     r += `<td class="px-2 py-2 border-b border-r border-slate-100 text-center"><input type="number" class="w-full text-center outline-none bg-transparent hover:bg-slate-50 focus:bg-emerald-50 focus:text-emerald-700 font-medium transition-colors rounded py-1" placeholder="-" value="${p}" onchange="updateHomeworkPenalty('${s.id}','${hw.id}',this.value)"></td>`;
                  });
                  r += `<td class="px-4 py-3 border-b border-slate-100 text-center font-bold text-rose-600 bg-slate-50/50 sticky right-0 z-10">${total}</td>`;
                  const tr = document.createElement('tr'); tr.innerHTML = r; body.appendChild(tr);
@@ -1273,7 +1274,7 @@
                  const isDone = hw.completed.includes(s.id);
                  const p = (hw.penalties||{})[s.id];
                  const d = document.createElement('div');
-                 d.className = `p-3 mb-2 rounded-xl border flex justify-between items-center cursor-pointer transition-all ${isDone ? 'bg-green-50 border-green-200 shadow-sm' : 'bg-white border-slate-100 hover:border-indigo-200'}`;
+                 d.className = `p-3 mb-2 rounded-xl border flex justify-between items-center cursor-pointer transition-all ${isDone ? 'bg-green-50 border-green-200 shadow-sm' : 'bg-white border-slate-200 hover:border-violet-300 shadow-sm'}`;
                  d.innerHTML = `
                     <div class="flex items-center gap-3">
                          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDone ? 'bg-green-200 text-green-700' : 'bg-slate-100 text-slate-500'}">${s.classNo}</div>
@@ -1339,7 +1340,7 @@
         }
         
         function renderHomeworkSeatingGrid() {
-            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            const cls = appData.classes.find(c => c.id === appApp.selectedClassId);
             const hw = cls.homeworks.find(h => h.id === selectedHomeworkId);
             const g = document.getElementById('hwSeatGrid');
             g.style.gridTemplateColumns = `repeat(${cls.seating.cols}, 60px)`;
@@ -1353,21 +1354,9 @@
                          d.className = "w-[60px] h-[60px] border border-slate-100 rounded-xl bg-slate-50/50";
                      } else {
                          const st = cls.students.find(s => s.id === val);
-                         if(st) {
-                             const isDone = hw.completed.includes(st.id);
-                             const p = (hw.penalties||{})[st.id];
-                             let border = isDone ? 'border-green-400 bg-green-50' : 'border-slate-200 bg-white';
-                             if(p) border = 'border-red-400 bg-red-50';
-                             
-                             d.className = `w-[60px] h-[60px] border-2 rounded-xl flex flex-col items-center justify-center text-xs p-1 text-center cursor-pointer relative shadow-sm ${border}`;
-                             d.innerHTML = `
-                                <div class="font-bold opacity-50 text-[8px]">${st.classNo}</div>
-                                <div class="font-bold truncate w-full leading-tight text-slate-700">${st.name.split(' ')[0]}</div>
-                                ${isDone ? '<div class="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full"></div>' : ''}
-                                ${p ? '<div class="absolute top-1 left-1 text-[8px] text-red-600 font-bold">!</div>' : ''}
-                             `;
-                             d.onclick = () => toggleHomeworkCompletion(st.id);
-                         }
+                         d.className += "bg-white border-violet-100 shadow-sm text-violet-900 cursor-pointer hover:border-violet-300 hover:shadow-md";
+                         d.innerHTML = st ? `<div class="font-bold text-violet-400 text-[10px] mb-1">${st.classNo}</div><div class="truncate w-full font-bold leading-tight">${st.name.split(' ')[0]}</div>` : '?';
+                         d.onclick = () => toggleHomeworkCompletion(st.id);
                      }
                      g.appendChild(d);
                  }
@@ -1415,7 +1404,7 @@
 
         // --- SEATING ---
         function updateSeatingGrid() {
-             const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+             const cls = appData.classes.find(c => c.id === appApp.selectedClassId);
              cls.seating.rows = document.getElementById('seatRows').value;
              cls.seating.cols = document.getElementById('seatCols').value;
              saveData();
@@ -1432,7 +1421,7 @@
                  btn.classList.remove('bg-violet-600', 'text-white', 'border-transparent'); btn.classList.add('bg-white', 'text-slate-700', 'border-slate-200');
                  btn.innerHTML = '<i class="ph ph-pencil-simple"></i> Edit';
              }
-             const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+             const cls = appData.classes.find(c => c.id === appApp.selectedClassId);
              renderSeatingPlan(cls);
         }
         
@@ -1473,7 +1462,7 @@
         
         function openSeatAssign(r, c) {
              selectedSeatCoords = {r,c};
-             const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+             const cls = appData.classes.find(c => c.id === appApp.selectedClassId);
              const l = document.getElementById('seatStudentList'); l.innerHTML = '';
              
              // List all students
@@ -1489,7 +1478,7 @@
         }
         
         function assignSeatValue(val) {
-            const cls = appData.classes.find(c => c.id === appData.selectedClassId);
+            const cls = appData.classes.find(c => c.id === appApp.selectedClassId);
             const k = `${selectedSeatCoords.r}-${selectedSeatCoords.c}`;
             
             if (val === null) {
@@ -1553,6 +1542,74 @@
              renderClassList();
              renderClassView(demoId);
         }
+
+        // Export current app data as a JSON file for download
+function exportData() {
+    try {
+        const dataStr = JSON.stringify(appData, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        a.download = `cwcc_classroom_backup_${ts}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        console.error('Export failed', e);
+        showAlert('Export Failed', 'Could not export data. See console for details.');
+    }
+}
+
+// Import JSON from the Restore textarea and replace app data
+function importDataText() {
+    const txt = document.getElementById('importText').value;
+    if (!txt) {
+        showAlert('Import Failed', 'No data provided.');
+        return;
+    }
+    try {
+        const parsed = JSON.parse(txt);
+        // Basic validation: expect object with classes array (best-effort)
+        if (!parsed || typeof parsed !== 'object') throw new Error('Invalid structure');
+        if (!Array.isArray(parsed.classes)) parsed.classes = parsed.classes || [];
+
+        appData = parsed;
+        if (!appData.classes) appData.classes = [];
+        if (!appData.selectedClassId && appData.classes.length) appData.selectedClassId = appApp.classes[0].id || null;
+
+        saveData();
+        renderClassList();
+        if (appData.selectedClassId) renderClassView(appData.selectedClassId);
+        closeModal('importModal');
+        showAlert('Success', 'Data restored successfully.');
+    } catch (err) {
+        console.error('Import error', err);
+        showAlert('Import Failed', 'Invalid JSON. Please paste a valid backup file.');
+    }
+}
+
+// Ask user to clear all saved data and reset app
+function askClearAllData() {
+    showConfirm('Reset All Data', 'This will permanently clear all saved data for this app in this browser. Continue?', () => {
+        appData = { classes: [], selectedClassId: null };
+        try { localStorage.removeItem('teacherAppData'); } catch (e) { console.warn(e); }
+        renderClassList();
+        document.getElementById('classDashboard').classList.add('hidden');
+        document.getElementById('emptyState').classList.remove('hidden');
+        showAlert('Reset', 'All local data has been cleared.');
+    });
+}
+
+// Ensure data is loaded when the page is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadData);
+} else {
+    // already ready
+    setTimeout(loadData, 0);
+}
 
     </script>
 </body>
